@@ -1,0 +1,147 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --font-cinzel: 'Cinzel', serif;
+    --font-serif: 'Newsreader', Georgia, serif;
+    --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    background-color: #0b0d11;
+    color: #e2e6ed;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #232834;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #333a4c;
+}
+
+/* Markdown typography styling */
+.berno-prose {
+  color: #d1d5db;
+  font-size: 0.975rem;
+  line-height: 1.7;
+}
+
+.berno-prose p {
+  margin-bottom: 1rem;
+}
+
+.berno-prose p:last-child {
+  margin-bottom: 0;
+}
+
+.berno-prose h1, .berno-prose h2, .berno-prose h3, .berno-prose h4 {
+  color: #f3f4f6;
+  font-family: 'Cinzel', serif;
+  letter-spacing: 0.02em;
+  font-weight: 600;
+  margin-top: 1.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.berno-prose h1 {
+  font-size: 1.45rem;
+}
+
+.berno-prose h2 {
+  font-size: 1.25rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 0.4rem;
+}
+
+.berno-prose h3 {
+  font-size: 1.1rem;
+  color: #e5b974;
+}
+
+.berno-prose ul {
+  list-style-type: disc;
+  padding-left: 1.4rem;
+  margin-bottom: 1rem;
+}
+
+.berno-prose ol {
+  list-style-type: decimal;
+  padding-left: 1.4rem;
+  margin-bottom: 1rem;
+}
+
+.berno-prose li {
+  margin-bottom: 0.35rem;
+}
+
+.berno-prose blockquote {
+  border-left: 3px solid #d4af37;
+  padding-left: 1rem;
+  font-style: italic;
+  color: #9ca3af;
+  margin: 1rem 0;
+  background: rgba(212, 175, 55, 0.03);
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+  border-radius: 0 6px 6px 0;
+}
+
+.berno-prose code:not(pre code) {
+  background: rgba(255, 255, 255, 0.08);
+  color: #e5b974;
+  padding: 0.15rem 0.35rem;
+  border-radius: 4px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.875em;
+}
+
+.berno-prose pre {
+  margin: 1rem 0;
+  border-radius: 8px;
+  overflow-x: auto;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: #07080a;
+}
+
+.berno-prose .group\/code pre {
+  margin: 0 !important;
+  border: none !important;
+  background: transparent !important;
+  padding: 0 !important;
+}
+
+.berno-prose table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1rem 0;
+  font-size: 0.9rem;
+}
+
+.berno-prose th, .berno-prose td {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+}
+
+.berno-prose th {
+  background: rgba(255, 255, 255, 0.04);
+  font-weight: 600;
+  color: #f3f4f6;
+}
+
+.berno-prose hr {
+  border-color: rgba(255, 255, 255, 0.08);
+  margin: 1.5rem 0;
+}

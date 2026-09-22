@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <linearGradient id="bernoGold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f5d77f"/>
+      <stop offset="50%" stop-color="#d4af37"/>
+      <stop offset="100%" stop-color="#9a7b1c"/>
+    </linearGradient>
+    <linearGradient id="bernoBg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#1c202a"/>
+      <stop offset="100%" stop-color="#0b0d12"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="16" fill="url(#bernoBg)"/>
+  <rect x="2" y="2" width="60" height="60" rx="14" fill="none" stroke="url(#bernoGold)" stroke-width="1.5" stroke-opacity="0.4"/>
+  <text x="32" y="44" font-family="Newsreader, Georgia, serif" font-size="36" font-weight="bold" fill="url(#bernoGold)" text-anchor="middle">B</text>
+</svg>

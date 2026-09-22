@@ -1,0 +1,6 @@
+{
+  "name": "Berno",
+  "description": "A refined, deep-thinking AI assistant designed with an editorial aesthetic and elevated reasoning capabilities.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
