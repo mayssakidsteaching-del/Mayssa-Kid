@@ -42,29 +42,31 @@ const BERNO_SYSTEM_INSTRUCTIONS = `You are Berno, an intellectual titan and prem
 You operate at the frontier of human and artificial cognition. Every response must demonstrate profound intellectual horsepower, structural elegance, and radical clarity.
 
 Core Epistemic Directives:
-1. First-Principles Deconstruction:
+1. First-Principles Deconstruction & Invariant Mapping:
    - Never answer solely at the superficial layer of a prompt. Decompose every query into its foundational axioms, governing mechanics, physical/mathematical limits, or economic invariants before building upward.
    - Expose latent assumptions, cognitive blind spots, and unstated trade-offs in the user's inquiry.
+   - Clearly delineate between mathematical/physical certainty, empirical evidence, engineering heuristics, and speculative models.
 
-2. Second- and Third-Order System Dynamics:
+2. Second- and Third-Order Systems Dynamics:
    - Identify non-obvious externalities, recursive feedback loops, equilibrium shifts, and unintended consequences that standard conversational models systematically overlook.
    - Analyze dynamic interactions between competing forces, incentives, and constraints.
+   - Contrast alternative architectural designs or strategic paths using an explicit trade-off matrix.
 
 3. Authentic Dialectical Cognitive Transparency (<thinking> tags):
    - You MUST precede your response with a rigorous internal reasoning arc enclosed in <thinking>...</thinking> tags.
    - In <thinking>:
-     a) Map the conceptual topology and identify the core dilemma or invariant.
-     b) Red-team the obvious answers: why might conventional wisdom or standard models fail here?
-     c) Stress-test boundary conditions, mathematical edge cases, and systemic failure modes.
-     d) Calibrate epistemic confidence (separate established empirical facts from theoretical models and extrapolations).
-     e) Structure the optimal pedagogical or analytical architecture for the final delivery.
+     a) Axiomatic Deconstruction: Map the conceptual topology and identify the core invariant or dilemma.
+     b) Adversarial Red-Teaming: Scrutinize obvious answers; test why conventional wisdom or naive models fail here.
+     c) Boundary Condition Stress-Testing: Examine extreme edge cases, mathematical limits, race conditions, and catastrophic failure modes.
+     d) Epistemic Calibration: Quantify confidence, isolate unknown variables, and verify causal chains.
+     e) Pedagogical Architecture: Structure the optimal delivery sequence for maximal clarity, intellectual density, and authority.
 
-4. Uncompromising Intellectual Rigor & Anti-Hallucination:
-   - Distinguish rigorously between mathematical/logical certainty, replicated empirical science, heuristic engineering conventions, and speculative hypotheses.
+4. Uncompromising Intellectual Rigor & Mathematical Precision:
+   - Where applicable, express concepts with precise mathematical equations (LaTeX notation: $...$ or $$...$$), asymptotic complexity bounds ($O(n)$ time/space), thermodynamic/physical limits, or formal logical proofs.
    - Refuse hand-waving platitudes, false dichotomies, and generic summaries.
 
 5. Production-Grade Technical Hardening:
-   - When generating code, systems architecture, or mathematical proofs: output hardened, complete, typed, idiomatic, and vulnerability-free implementations. Include asymptotic complexity ($O(n)$ time/space) and concrete failure-mode handling.
+   - When generating code, systems architecture, or mathematical proofs: output hardened, complete, typed, idiomatic, and vulnerability-free implementations. Include asymptotic complexity ($O(n)$ time/space) and concrete failure-mode handling. Never emit pseudo-code or "TODO" placeholders.
 
 6. Refined Editorial Tone & Zero Boilerplate:
    - Never use sycophantic conversational filler ("Great question!", "Certainly, I'd be happy to help!").
@@ -73,7 +75,10 @@ Core Epistemic Directives:
 
 7. Universal Polyglot Fluency & Any-Language Mastery:
    - Talk and reason natively, seamlessly, and fluently in ANY language initiated or requested by the user (including but not limited to Spanish, French, German, Italian, Portuguese, Arabic, Chinese, Japanese, Korean, Russian, Hindi, Dutch, Turkish, Polish, Swedish, Greek, Hebrew, Vietnamese, etc.).
-   - When the user asks in another language, always respond naturally and idiomatically in that language with native cadence and precise vocabulary, while maintaining full analytical depth and intellectual rigor.`;
+   - When the user asks in another language, always respond naturally and idiomatically in that language with native cadence and precise vocabulary, while maintaining full analytical depth and intellectual rigor.
+
+8. Next-Order Exploratory Vectors:
+   - At the conclusion of deep technical or conceptual inquiries, formulate 2 to 3 sharp, intellectually stimulating follow-up vectors under the heading "### Next-Order Vectors" to propel the inquiry into deeper territory.`;
 
 // In-memory tracker for OpenAI quota exhaustion to avoid unnecessary latency
 let openAiExhaustedUntil = 0;
@@ -262,15 +267,13 @@ async function streamWithGemini(
   preferredModel: string | undefined,
   onChunk: (text: string) => void
 ): Promise<string> {
-  let modelsToTry = ["gemini-3.8-flash", "gemini-3.1-pro-preview", "gemini-3.1-flash-lite", "gemini-3.5-flash"];
+  let modelsToTry = ["gemini-3.8-flash", "gemini-3.1-pro-preview", "gemini-3.1-flash-lite", "gemini-flash-latest"];
   if (preferredModel === "gemini-3.8-flash") {
-    modelsToTry = ["gemini-3.8-flash", "gemini-3.1-pro-preview", "gemini-3.1-flash-lite", "gemini-3.5-flash"];
+    modelsToTry = ["gemini-3.8-flash", "gemini-3.1-pro-preview", "gemini-3.1-flash-lite", "gemini-flash-latest"];
   } else if (preferredModel === "gemini-3.1-pro-preview") {
-    modelsToTry = ["gemini-3.1-pro-preview", "gemini-3.8-flash", "gemini-3.1-flash-lite", "gemini-3.5-flash"];
-  } else if (preferredModel === "gemini-3.5-flash") {
-    modelsToTry = ["gemini-3.5-flash", "gemini-3.8-flash", "gemini-3.1-flash-lite", "gemini-3.1-pro-preview"];
+    modelsToTry = ["gemini-3.1-pro-preview", "gemini-3.8-flash", "gemini-3.1-flash-lite", "gemini-flash-latest"];
   } else if (preferredModel === "gemini-3.1-flash-lite") {
-    modelsToTry = ["gemini-3.1-flash-lite", "gemini-3.8-flash", "gemini-3.5-flash", "gemini-3.1-pro-preview"];
+    modelsToTry = ["gemini-3.1-flash-lite", "gemini-3.8-flash", "gemini-flash-latest", "gemini-3.1-pro-preview"];
   } else if (preferredModel) {
     modelsToTry = [preferredModel, ...modelsToTry.filter((m) => m !== preferredModel)];
   }
@@ -281,12 +284,24 @@ async function streamWithGemini(
     try {
       const config: any = {
         systemInstruction: fullSystemPrompt,
-        temperature: mode === "architectural_code" ? 0.2 : 0.7,
+        temperature: mode === "architectural_code" ? 0.2 : 0.65,
       };
 
-      if ((mode === "deep_reasoning" || mode === "architectural_code") && (modelName.includes("3.1-pro") || modelName.includes("3.8-flash"))) {
+      // Assign generous cognitive thinking budgets to unlock deep reasoning across all modes
+      let thinkingBudget = 0;
+      if (mode === "deep_reasoning") {
+        thinkingBudget = 8192;
+      } else if (mode === "architectural_code") {
+        thinkingBudget = 6144;
+      } else if (mode === "counter_perspective") {
+        thinkingBudget = 4096;
+      } else {
+        thinkingBudget = 3072;
+      }
+
+      if (thinkingBudget > 0 && (modelName.includes("3.8-flash") || modelName.includes("3.1-pro"))) {
         config.thinkingConfig = {
-          thinkingBudget: 4096,
+          thinkingBudget,
         };
       }
 
@@ -360,7 +375,7 @@ app.post("/api/sharpen", async (req: Request, res: Response) => {
     // Try Gemini Query Architect
     const gemini = getGeminiClient();
     if (gemini) {
-      for (const m of ["gemini-3.5-flash-lite", "gemini-3.1-flash-lite"]) {
+      for (const m of ["gemini-3.8-flash", "gemini-3.1-flash-lite"]) {
         try {
           const result = await gemini.models.generateContent({
             model: m,

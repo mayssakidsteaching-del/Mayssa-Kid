@@ -325,10 +325,45 @@ export function ChatInput({
             )}
           </div>
         </div>
+
+        {/* Smart Query Elevation Suggestion */}
+        {input.trim().length > 3 && input.trim().length < 80 && !isStreaming && (
+          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-white/5 bg-white/[0.015] px-3.5 py-1.5 text-xs animate-in fade-in duration-200">
+            <span className="flex items-center gap-1.5 text-neutral-400 font-mono text-[11px]">
+              <Sparkles className="h-3 w-3 text-[#d4af37]" />
+              <span>Elevate inquiry into an analytical architectural prompt:</span>
+            </span>
+            <button
+              type="button"
+              onClick={handleSharpen}
+              disabled={isSharpening}
+              className="flex items-center gap-1 rounded-md bg-[#d4af37]/15 border border-[#d4af37]/30 px-2 py-0.5 font-mono text-[11px] font-medium text-[#f3e7cb] hover:bg-[#d4af37]/25 transition-all shadow-sm"
+              title="Transform this prompt using Berno Query Architect"
+            >
+              {isSharpening ? (
+                <>
+                  <Sparkles className="h-3 w-3 animate-spin text-[#d4af37]" />
+                  <span>Sharpening...</span>
+                </>
+              ) : (
+                <>
+                  <Wand2 className="h-3 w-3 text-[#d4af37]" />
+                  <span>Sharpen Inquiry</span>
+                </>
+              )}
+            </button>
+          </div>
+        )}
       </div>
 
-      <div className="mt-2 flex items-center justify-between px-2 text-[11px] font-mono text-neutral-500">
-        <span>Berno AI • Model: {selectedModel} • Role: {activeRoleConfig.title}</span>
+      <div className="mt-2 flex flex-wrap items-center justify-between gap-2 px-2 text-[11px] font-mono text-neutral-500">
+        <div className="flex items-center gap-2">
+          <span>Berno Cognitive Titan</span>
+          <span>•</span>
+          <span className="text-[#d4af37]/80">Reasoning Budget: 8,192 tokens</span>
+          <span>•</span>
+          <span className="text-neutral-400">{activeRoleConfig.title}</span>
+        </div>
         <span>Enter to dispatch • Shift + Enter for newline</span>
       </div>
     </div>

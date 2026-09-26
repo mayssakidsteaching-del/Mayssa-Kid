@@ -6,6 +6,7 @@ import { MessageItem } from './components/MessageItem';
 import { ChatInput } from './components/ChatInput';
 import { EmptyState } from './components/EmptyState';
 import { AboutModal } from './components/AboutModal';
+import { ConversationProgressBar } from './components/ConversationProgressBar';
 import { VoiceConversationModal } from './components/VoiceConversationModal';
 import { VeoVideoStudioModal } from './components/VeoVideoStudioModal';
 import {
@@ -675,6 +676,13 @@ export default function App() {
           onChangeModel={setSelectedModel}
           chatbotRole={chatbotRole}
           onChangeChatbotRole={setChatbotRole}
+        />
+
+        {/* Dynamic Scroll Progress Bar for Active Dialogue */}
+        <ConversationProgressBar
+          scrollContainerRef={scrollContainerRef}
+          hasMessages={messages.length > 0}
+          isStreaming={isStreaming}
         />
 
         {/* Message Stream Area */}
