@@ -5,6 +5,7 @@ import { Conversation } from '../types';
 export interface PdfExportOptions {
   theme?: 'editorial_dark' | 'editorial_light';
   includeThinking?: boolean;
+  executiveSummary?: string;
 }
 
 /**
@@ -16,7 +17,7 @@ export async function exportConversationToPdf(
   conversation: Conversation,
   options: PdfExportOptions = {}
 ): Promise<void> {
-  const { theme = 'editorial_dark', includeThinking = true } = options;
+  const { theme = 'editorial_dark', includeThinking = true, executiveSummary } = options;
 
   if (!conversation || conversation.messages.length === 0) {
     throw new Error('Cannot export an empty conversation.');
@@ -88,6 +89,34 @@ export async function exportConversationToPdf(
         </div>
       </div>
     </div>
+
+    ${
+      executiveSummary
+        ? `
+    <!-- Session Executive Summary -->
+    <div style="border: 1px solid ${accentGold}55; border-left: 4px solid ${accentGold}; background: ${
+            isDark ? '#121622' : '#f9fafc'
+          }; border-radius: 8px; padding: 22px 26px; margin-bottom: 34px; box-shadow: 0 4px 16px rgba(0,0,0,0.18);">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; border-bottom: 1px solid ${borderColor}; padding-bottom: 10px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.14em; color: ${accentGold}; background: ${accentGold}18; border: 1px solid ${accentGold}40; padding: 3px 8px; border-radius: 4px;">
+            Executive Synthesis Arc
+          </span>
+          <h2 style="font-family: Georgia, Cambria, serif; font-size: 17px; font-weight: 700; color: ${textColor}; margin: 0; letter-spacing: -0.01em;">
+            Session Executive Summary
+          </h2>
+        </div>
+        <span style="font-family: -apple-system, BlinkMacSystemFont, sans-serif; font-size: 10px; color: ${mutedColor}; font-style: italic;">
+          AI-generated from full conversation thread
+        </span>
+      </div>
+      <div style="font-family: Georgia, Cambria, serif; font-size: 13.5px; line-height: 1.75; color: ${textColor};">
+        ${formatMarkdownForPdf(executiveSummary, codeBg, isDark)}
+      </div>
+    </div>
+    `
+        : ''
+    }
 
     <!-- Messages Flow -->
     <div style="display: flex; flex-direction: column; gap: 28px;">
@@ -304,3 +333,116 @@ function formatMarkdownForPdf(rawText: string, codeBg: string, isDark: boolean):
     })
     .join('');
 }
+
+export interface ReadingStatsReportData {
+  focusSeconds: number;
+  dailyMinutes: number;
+  dailyArticlesFinished: number;
+  dailyWords: number;
+  goalMinutes: number;
+  conversationTitle?: string;
+}
+
+/**
+ * Generates an editorial PDF report of reading session statistics.
+ */
+export async function exportReadingStatsToPdf(data: ReadingStatsReportData): Promise<void> {
+  const container = document.createElement('div');
+  container.id = 'berno-reading-stats-pdf';
+  container.style.position = 'fixed';
+  container.style.left = '-9999px';
+  container.style.top = '0';
+  container.style.width = '794px';
+  container.style.minHeight = '600px';
+  container.style.padding = '48px';
+  container.style.backgroundColor = '#0c0e14';
+  container.style.color = '#e4e7ec';
+  container.style.fontFamily = 'Georgia, serif';
+
+  const dateStr = new Date().toLocaleDateString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+
+  const focusMins = Math.floor(data.focusSeconds / 60);
+  const totalMins = data.dailyMinutes + focusMins;
+  const goalPct = Math.min(100, Math.round((totalMins / Math.max(1, data.goalMinutes)) * 100));
+
+  container.innerHTML = `
+    <div style="border-bottom: 2px solid #d4af37; padding-bottom: 20px; margin-bottom: 28px; display: flex; justify-content: space-between; align-items: flex-end;">
+      <div>
+        <h1 style="font-size: 26px; font-weight: 700; color: #ffffff; margin: 0 0 6px 0; letter-spacing: 0.02em;">Berno Editorial Intelligence</h1>
+        <p style="font-size: 13px; color: #d4af37; margin: 0; font-family: monospace;">Daily Reading & Cognitive Engagement Summary</p>
+      </div>
+      <div style="text-align: right; font-family: monospace; font-size: 11px; color: #9aa1b2;">
+        ${dateStr}
+      </div>
+    </div>
+
+    <div style="background: rgba(212, 175, 55, 0.05); border: 1px solid rgba(212, 175, 55, 0.3); border-radius: 12px; padding: 24px; margin-bottom: 28px;">
+      <h2 style="font-size: 18px; margin: 0 0 16px 0; color: #f5ebd7;">Reading Telemetry Overview</h2>
+      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px;">
+        <div style="background: #141722; padding: 16px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.08);">
+          <div style="font-size: 11px; color: #d4af37; font-family: monospace;">DAILY READING TIME</div>
+          <div style="font-size: 28px; font-weight: bold; color: #ffffff; margin-top: 4px;">${totalMins} <span style="font-size: 14px; font-weight: normal; color: #9aa1b2;">min</span></div>
+          <div style="font-size: 11px; color: #9aa1b2; margin-top: 4px;">Goal: ${data.goalMinutes} min (${goalPct}%)</div>
+        </div>
+
+        <div style="background: #141722; padding: 16px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.08);">
+          <div style="font-size: 11px; color: #d4af37; font-family: monospace;">ARTICLES COMPLETED</div>
+          <div style="font-size: 28px; font-weight: bold; color: #ffffff; margin-top: 4px;">${data.dailyArticlesFinished}</div>
+          <div style="font-size: 11px; color: #9aa1b2; margin-top: 4px;">100% Scroll Depth</div>
+        </div>
+
+        <div style="background: #141722; padding: 16px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.08);">
+          <div style="font-size: 11px; color: #d4af37; font-family: monospace;">WORDS EXPLORED</div>
+          <div style="font-size: 28px; font-weight: bold; color: #ffffff; margin-top: 4px;">${data.dailyWords.toLocaleString()}</div>
+          <div style="font-size: 11px; color: #9aa1b2; margin-top: 4px;">At ~250 WPM Benchmark</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="background: #10131c; border-radius: 12px; padding: 20px; border: 1px solid rgba(255, 255, 255, 0.08); margin-bottom: 24px;">
+      <h3 style="font-size: 14px; color: #ffffff; margin: 0 0 10px 0;">Focus Session Engagement Details</h3>
+      <p style="font-size: 12px; color: #9aa1b2; line-height: 1.6; margin: 0;">
+        Active engagement tracked during this session: <strong>${focusMins} minutes ${data.focusSeconds % 60} seconds</strong>. 
+        Focus timer automatically pauses during idle periods to ensure pure, uninflated metrics.
+      </p>
+    </div>
+
+    <div style="border-top: 1px solid rgba(255, 255, 255, 0.1); padding-top: 16px; display: flex; justify-content: space-between; font-size: 10px; font-family: monospace; color: #6b7280;">
+      <span>Berno Cognitive Architecture • Infinite IQ Core</span>
+      <span>Confidential & Certified Personal Telemetry</span>
+    </div>
+  `;
+
+  document.body.appendChild(container);
+
+  try {
+    const canvas = await html2canvas(container, {
+      scale: 2,
+      useCORS: true,
+      backgroundColor: '#0c0e14',
+    });
+
+    const pdf = new jsPDF({
+      orientation: 'portrait',
+      unit: 'pt',
+      format: 'a4',
+    });
+
+    const imgData = canvas.toDataURL('image/jpeg', 0.95);
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+
+    pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+    pdf.save(`berno-reading-report-${new Date().toISOString().slice(0, 10)}.pdf`);
+  } finally {
+    document.body.removeChild(container);
+  }
+}
+

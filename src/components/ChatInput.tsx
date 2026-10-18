@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { ThinkingMode, ChatbotRole } from '../types';
 import { THINKING_MODES } from '../utils/constants';
 import { CHATBOT_ROLES } from '../utils/chatbotRoles';
@@ -12,10 +12,14 @@ import {
   Radio,
   Film,
   Bot,
+  Camera,
+  Image as ImageIcon,
+  X,
 } from 'lucide-react';
+import { CameraCaptureModal } from './CameraCaptureModal';
 
 interface ChatInputProps {
-  onSend: (text: string, mode: ThinkingMode) => void;
+  onSend: (text: string, mode: ThinkingMode, attachedImage?: string) => void;
   onStop: () => void;
   isStreaming: boolean;
   selectedMode: ThinkingMode;
@@ -25,8 +29,10 @@ interface ChatInputProps {
   chatbotRole: ChatbotRole;
   onChangeChatbotRole: (role: ChatbotRole) => void;
   onOpenVoice: () => void;
-  onOpenVeo: () => void;
+  onOpenStudio?: () => void;
   selectedModel: string;
+  readabilityMode?: boolean;
+  readingIndicatorNode?: React.ReactNode;
 }
 
 export function ChatInput({
@@ -40,16 +46,22 @@ export function ChatInput({
   chatbotRole,
   onChangeChatbotRole,
   onOpenVoice,
-  onOpenVeo,
+  onOpenStudio,
   selectedModel,
+  readabilityMode = false,
+  readingIndicatorNode,
 }: ChatInputProps) {
   const [input, setInput] = useState('');
   const [isSharpening, setIsSharpening] = useState(false);
   const [showModeMenu, setShowModeMenu] = useState(false);
   const [showRoleMenu, setShowRoleMenu] = useState(false);
+  const [isCameraModalOpen, setIsCameraModalOpen] = useState(false);
+  const [attachedImage, setAttachedImage] = useState<string | null>(null);
+
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const roleDropdownRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const activeModeConfig =
     THINKING_MODES.find((m) => m.id === selectedMode) || THINKING_MODES[0];
@@ -95,9 +107,10 @@ export function ChatInput({
   };
 
   const handleSubmit = () => {
-    if (!input.trim() || isStreaming) return;
-    onSend(input.trim(), selectedMode);
+    if ((!input.trim() && !attachedImage) || isStreaming) return;
+    onSend(input.trim(), selectedMode, attachedImage || undefined);
     setInput('');
+    setAttachedImage(null);
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
     }
@@ -117,87 +130,97 @@ export function ChatInput({
         setInput(data.sharpened);
       }
     } catch (e) {
-      console.error('Failed to sharpen inquiry', e);
+      console.error('Sharpen failed', e);
     } finally {
       setIsSharpening(false);
     }
   };
 
+  const handleGalleryUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      setAttachedImage(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
   return (
-    <div className="relative w-full max-w-4xl mx-auto px-3 sm:px-4 pb-6 pt-2">
-      <div className="relative rounded-2xl border border-white/15 bg-[#12151c]/90 shadow-2xl backdrop-blur-md transition-all focus-within:border-[#d4af37]/60 focus-within:ring-1 focus-within:ring-[#d4af37]/30">
-        {/* Top Control Bar: Thinking Stance & Chatbot Persona */}
-        <div className="flex flex-wrap items-center justify-between border-b border-white/5 px-3 sm:px-4 py-2 text-xs gap-2">
-          {/* Mode & Persona Selectors */}
-          <div className="flex items-center gap-2">
-            {/* Thinking Stance Selector */}
+    <div className="relative border-t border-white/10 bg-[#07080c] px-4 py-3 sm:px-6">
+      <div className="mx-auto max-w-4xl rounded-2xl border border-white/10 bg-[#0e1017] shadow-2xl transition-all focus-within:border-[#d4af37]/50 focus-within:shadow-[0_0_25px_rgba(212,175,55,0.15)]">
+        {/* Top Control Bar: Mode, Persona, Media tools, Studio */}
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/5 px-3.5 py-2 text-xs">
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Thinking Mode Dropdown */}
             <div className="relative" ref={dropdownRef}>
               <button
+                type="button"
                 onClick={() => setShowModeMenu(!showModeMenu)}
-                className="flex items-center gap-1.5 sm:gap-2 rounded-lg px-2 py-1 font-medium transition-colors hover:bg-white/5"
-                style={{ color: activeModeConfig.accentColor }}
-                title="Select cognitive reasoning stance"
+                className="flex items-center gap-1.5 rounded-lg border px-2 py-1 text-[11px] font-mono transition-all hover:bg-white/5"
+                style={{
+                  borderColor: `${activeModeConfig.accentColor}40`,
+                  backgroundColor: `${activeModeConfig.accentColor}10`,
+                  color: activeModeConfig.accentColor,
+                }}
               >
-                <span
-                  className="h-2 w-2 rounded-full"
-                  style={{ backgroundColor: activeModeConfig.accentColor }}
-                />
-                <span className="font-mono text-xs">{activeModeConfig.name}</span>
+                <span className="font-semibold">{activeModeConfig.name}</span>
                 <ChevronDown className="h-3 w-3 opacity-60" />
               </button>
 
               {showModeMenu && (
-                <div className="absolute left-0 top-full z-50 mt-1.5 w-72 overflow-hidden rounded-xl border border-white/10 bg-[#0d1016] p-1.5 shadow-2xl backdrop-blur-xl">
-                  <div className="px-2.5 py-1 text-[11px] font-mono uppercase tracking-wider text-neutral-500">
-                    Cognitive Stance
+                <div className="absolute bottom-full left-0 mb-2 w-72 rounded-xl border border-white/10 bg-[#12151f] p-1.5 shadow-2xl backdrop-blur-xl z-30 animate-in fade-in zoom-in-95 duration-150">
+                  <div className="px-2 py-1 text-[10px] font-mono text-neutral-400 uppercase tracking-wider">
+                    Cognitive Reasoning Modes
                   </div>
-                  {THINKING_MODES.map((mode) => (
+                  {THINKING_MODES.map((m) => (
                     <button
-                      key={mode.id}
+                      key={m.id}
                       onClick={() => {
-                        onSelectMode(mode.id);
+                        onSelectMode(m.id);
                         setShowModeMenu(false);
                       }}
-                      className={`flex w-full flex-col rounded-lg p-2.5 text-left transition-all ${
-                        selectedMode === mode.id
+                      className={`flex w-full flex-col rounded-lg p-2 text-left transition-all ${
+                        selectedMode === m.id
                           ? 'bg-white/10 text-white'
-                          : 'text-neutral-300 hover:bg-white/5 hover:text-white'
+                          : 'text-neutral-400 hover:bg-white/5 hover:text-neutral-200'
                       }`}
                     >
-                      <div className="flex items-center gap-2 font-medium">
-                        <span
-                          className="h-2 w-2 rounded-full"
-                          style={{ backgroundColor: mode.accentColor }}
-                        />
-                        <span style={{ color: mode.accentColor }}>
-                          {mode.name}
+                      <div className="flex items-center justify-between">
+                        <span className="font-mono text-xs font-semibold" style={{ color: m.accentColor }}>
+                          {m.name}
                         </span>
+                        <span className="text-[10px] opacity-60 font-mono">{m.tagline}</span>
                       </div>
-                      <span className="mt-1 text-[11px] text-neutral-400">
-                        {mode.tagline}
-                      </span>
+                      <span className="text-[11px] text-neutral-400 mt-0.5">{m.description}</span>
                     </button>
                   ))}
                 </div>
               )}
             </div>
 
-            {/* Chatbot Persona Dropdown */}
+            {/* Persona Selector */}
             <div className="relative" ref={roleDropdownRef}>
               <button
+                type="button"
                 onClick={() => setShowRoleMenu(!showRoleMenu)}
-                className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.02] px-2 py-1 text-xs font-mono text-neutral-300 transition-colors hover:bg-white/5 hover:text-white"
-                title="Select Gemini Persona Role"
+                className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-[11px] font-mono text-neutral-300 transition-all hover:bg-white/10 hover:text-white"
               >
                 <Bot className="h-3 w-3 text-[#d4af37]" />
-                <span className="max-w-[120px] truncate">{activeRoleConfig.title}</span>
-                <ChevronDown className="h-3 w-3 opacity-50" />
+                <span className="font-medium">{activeRoleConfig.badge}</span>
+                <ChevronDown className="h-3 w-3 opacity-60" />
               </button>
 
               {showRoleMenu && (
-                <div className="absolute left-0 top-full z-50 mt-1.5 w-72 overflow-hidden rounded-xl border border-white/10 bg-[#0d1016] p-1.5 shadow-2xl backdrop-blur-xl">
-                  <div className="px-2.5 py-1 text-[11px] font-mono uppercase tracking-wider text-neutral-500">
-                    Chatbot Persona Role
+                <div className="absolute bottom-full left-0 mb-2 w-80 rounded-xl border border-white/10 bg-[#12151f] p-1.5 shadow-2xl backdrop-blur-xl z-30 animate-in fade-in zoom-in-95 duration-150">
+                  <div className="px-2 py-1 text-[10px] font-mono text-neutral-400 uppercase tracking-wider">
+                    Select Specialist Persona
                   </div>
                   {Object.values(CHATBOT_ROLES).map((role) => (
                     <button
@@ -206,16 +229,21 @@ export function ChatInput({
                         onChangeChatbotRole(role.id);
                         setShowRoleMenu(false);
                       }}
-                      className={`flex w-full flex-col rounded-lg p-2.5 text-left transition-all ${
+                      className={`flex w-full flex-col rounded-lg p-2 text-left transition-all ${
                         chatbotRole === role.id
-                          ? 'bg-white/10 text-[#d4af37]'
-                          : 'text-neutral-300 hover:bg-white/5 hover:text-white'
+                          ? 'bg-[#d4af37]/20 border border-[#d4af37]/30 text-white'
+                          : 'text-neutral-400 hover:bg-white/5 hover:text-neutral-200'
                       }`}
                     >
-                      <span className="font-semibold text-xs">{role.title}</span>
-                      <span className="mt-0.5 text-[11px] text-neutral-400">
-                        {role.description}
-                      </span>
+                      <div className="flex items-center justify-between">
+                        <span className="font-serif text-xs font-semibold text-[#f3cf65]">
+                          {role.title}
+                        </span>
+                        <span className="rounded bg-white/10 px-1.5 py-0.2 text-[9px] font-mono text-neutral-300">
+                          {role.badge}
+                        </span>
+                      </div>
+                      <span className="text-[11px] text-neutral-400 mt-0.5">{role.description}</span>
                     </button>
                   ))}
                 </div>
@@ -223,29 +251,35 @@ export function ChatInput({
             </div>
           </div>
 
-          {/* Actions: Research Mode, Live Voice, Veo Video, Sharpen */}
-          <div className="flex items-center gap-1.5 sm:gap-2">
-            {/* Live Voice Shortcut */}
+          <div className="flex items-center gap-1.5">
+            {/* Take Photo Camera Button */}
             <button
               type="button"
-              onClick={onOpenVoice}
-              className="flex items-center gap-1 rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-2 py-1 text-[11px] font-mono text-emerald-400 hover:bg-emerald-500/15 transition-all"
-              title="Open Gemini Live Voice (gemini-3.8-live)"
+              onClick={() => setIsCameraModalOpen(true)}
+              className="flex items-center gap-1 rounded-lg border border-white/10 bg-white/[0.03] px-2 py-1 text-[11px] font-mono text-neutral-300 hover:bg-white/10 hover:text-white transition-all"
+              title="Take Photo with Camera"
             >
-              <Radio className="h-3 w-3 animate-pulse text-emerald-400" />
-              <span className="hidden sm:inline">Voice</span>
+              <Camera className="h-3.5 w-3.5 text-[#d4af37]" />
+              <span className="hidden sm:inline">Camera</span>
             </button>
 
-            {/* Veo Video Shortcut */}
+            {/* Gallery Upload Button */}
             <button
               type="button"
-              onClick={onOpenVeo}
-              className="flex items-center gap-1 rounded-lg border border-[#d4af37]/20 bg-[#d4af37]/5 px-2 py-1 text-[11px] font-mono text-[#e0bd60] hover:bg-[#d4af37]/15 transition-all"
-              title="Open Veo 3 Video Studio (veo-3.1-fast-generate-preview)"
+              onClick={() => fileInputRef.current?.click()}
+              className="flex items-center gap-1 rounded-lg border border-white/10 bg-white/[0.03] px-2 py-1 text-[11px] font-mono text-neutral-300 hover:bg-white/10 hover:text-white transition-all"
+              title="Upload Photo from Gallery"
             >
-              <Film className="h-3 w-3 text-[#d4af37]" />
-              <span className="hidden sm:inline">Veo</span>
+              <ImageIcon className="h-3.5 w-3.5 text-neutral-400" />
+              <span className="hidden sm:inline">Photo</span>
             </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleGalleryUpload}
+            />
 
             {/* Research Mode Toggle */}
             <button
@@ -288,8 +322,33 @@ export function ChatInput({
           </div>
         </div>
 
+        {/* Attached Photo Preview Thumbnail */}
+        {attachedImage && (
+          <div className="flex items-center gap-3 border-b border-white/5 bg-black/40 px-3.5 py-2 animate-in fade-in duration-150">
+            <div className="relative h-14 w-14 shrink-0 rounded-lg overflow-hidden border border-[#d4af37]/40 shadow-md">
+              <img
+                src={attachedImage}
+                alt="Attached"
+                className="h-full w-full object-cover"
+              />
+              <button
+                type="button"
+                onClick={() => setAttachedImage(null)}
+                className="absolute top-0.5 right-0.5 rounded-full bg-black/75 p-0.5 text-neutral-300 hover:text-white"
+                title="Remove photo"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </div>
+            <div className="text-xs">
+              <p className="font-mono text-neutral-200 font-medium">Image attached to inquiry</p>
+              <p className="text-[11px] text-neutral-500 font-mono">Berno will analyze visual features with infinite IQ</p>
+            </div>
+          </div>
+        )}
+
         {/* Input Textarea Area */}
-        <div className="flex items-end gap-3 p-3.5">
+        <div className="flex items-end gap-3 p-3.5 relative">
           <textarea
             ref={textareaRef}
             rows={1}
@@ -304,7 +363,9 @@ export function ChatInput({
             className="max-h-48 min-h-[48px] w-full resize-none bg-transparent px-2 py-1 text-[15px] leading-relaxed text-neutral-100 placeholder:text-neutral-500 focus:outline-none"
           />
 
-          <div className="shrink-0 pb-1">
+          {/* Send Button Column */}
+          <div className="shrink-0 pb-1 flex items-center">
+
             {isStreaming ? (
               <button
                 onClick={onStop}
@@ -316,7 +377,7 @@ export function ChatInput({
             ) : (
               <button
                 onClick={handleSubmit}
-                disabled={!input.trim()}
+                disabled={!input.trim() && !attachedImage}
                 className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#d4af37] text-neutral-950 font-bold shadow-lg transition-all hover:bg-[#e2bd4e] hover:scale-105 active:scale-95 disabled:opacity-20 disabled:pointer-events-none disabled:hover:scale-100"
                 title="Send inquiry"
               >
@@ -358,7 +419,7 @@ export function ChatInput({
 
       <div className="mt-2 flex flex-wrap items-center justify-between gap-2 px-2 text-[11px] font-mono text-neutral-500">
         <div className="flex items-center gap-2">
-          <span>Berno Cognitive Titan</span>
+          <span>Berno Infinite IQ Titan</span>
           <span>•</span>
           <span className="text-[#d4af37]/80">Reasoning Budget: 8,192 tokens</span>
           <span>•</span>
@@ -366,7 +427,15 @@ export function ChatInput({
         </div>
         <span>Enter to dispatch • Shift + Enter for newline</span>
       </div>
+
+      {/* Camera Capture Modal */}
+      <CameraCaptureModal
+        isOpen={isCameraModalOpen}
+        onClose={() => setIsCameraModalOpen(false)}
+        onCaptureAndSend={(base64Image) => {
+          setAttachedImage(base64Image);
+        }}
+      />
     </div>
   );
 }
-

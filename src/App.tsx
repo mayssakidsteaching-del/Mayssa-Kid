@@ -1,14 +1,28 @@
-import { useState, useEffect, useRef } from 'react';
-import { Conversation, Message, ThinkingMode, ChatbotRole } from './types';
+import { useState, useEffect, useRef, useMemo } from 'react';
+import {
+  Conversation,
+  Message,
+  ThinkingMode,
+  ChatbotRole,
+  ReadingListItem,
+  ReadingHistoryItem,
+  GroundingSource,
+  User,
+} from './types';
 import { Header } from './components/Header';
 import { Sidebar } from './components/Sidebar';
 import { MessageItem } from './components/MessageItem';
 import { ChatInput } from './components/ChatInput';
 import { EmptyState } from './components/EmptyState';
 import { AboutModal } from './components/AboutModal';
+import { AuthModal } from './components/AuthModal';
 import { ConversationProgressBar } from './components/ConversationProgressBar';
 import { VoiceConversationModal } from './components/VoiceConversationModal';
-import { VeoVideoStudioModal } from './components/VeoVideoStudioModal';
+import { VeoVideoStudioModal, StudioTab } from './components/VeoVideoStudioModal';
+import { ReaderDashboardModal } from './components/ReaderDashboardModal';
+import { CreativeStudioPickerModal } from './components/CreativeStudioPickerModal';
+import { SoftKeyboardOverlay } from './components/SoftKeyboardOverlay';
+import { TableOfContents } from './components/TableOfContents';
 import {
   loadConversations,
   saveConversations,
@@ -17,8 +31,16 @@ import {
   loadSavedMode,
   saveSelectedMode,
   exportConversationAsJson,
+  loadReadingList,
+  saveReadingList,
+  loadReadingHistory,
+  saveReadingHistory,
+  recordConversationView,
+  clearReadingHistory,
 } from './utils/storage';
+import { calculateReadingTime, calculateWordCount } from './utils/readingTime';
 import { exportConversationToPdf } from './utils/pdfExport';
+import { fetchSessionExecutiveSummary } from './utils/executiveSummary';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { useReadAloud } from './hooks/useReadAloud';
 import { parseRawMessage } from './utils/parser';
@@ -34,7 +56,7 @@ export default function App() {
   const [selectedMode, setSelectedMode] = useState<ThinkingMode>(() =>
     loadSavedMode()
   );
-  const [selectedModel, setSelectedModel] = useState<string>('gemini-3.8-flash');
+  const [selectedModel, setSelectedModel] = useState<string>('gemini-3.5-flash');
   const [chatbotRole, setChatbotRole] = useState<ChatbotRole>('epistemic_architect');
   const [researchMode, setResearchMode] = useState<boolean>(false);
   const [isStreaming, setIsStreaming] = useState(false);
@@ -44,7 +66,69 @@ export default function App() {
   const [isVoiceModalOpen, setIsVoiceModalOpen] = useState(false);
   const [isVeoModalOpen, setIsVeoModalOpen] = useState(false);
   const [isExportingPdf, setIsExportingPdf] = useState(false);
+  const [isExportingMarkdown, setIsExportingMarkdown] = useState(false);
+  const [exportProgress, setExportProgress] = useState(0);
+
+  // Authenticated Scholar User state
+  const [user, setUser] = useState<User | null>(() => {
+    try {
+      const saved = localStorage.getItem('berno_auth_user');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [readingList, setReadingList] = useState<ReadingListItem[]>(() => loadReadingList());
+  const [readingHistory, setReadingHistory] = useState<ReadingHistoryItem[]>(() => loadReadingHistory());
+  const [activeSidebarTab, setActiveSidebarTab] = useState<'inquiries' | 'reading_list' | 'history'>('inquiries');
+  const [readabilityMode, setReadabilityMode] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('berno_readability_mode') === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  // Focus Session timer & Reader Dashboard state
+  const [isReaderDashboardOpen, setIsReaderDashboardOpen] = useState(false);
+  const [focusActiveSeconds, setFocusActiveSeconds] = useState(0);
+  const [isFocusActive, setIsFocusActive] = useState(true);
+  const [isFocusPaused, setIsFocusPaused] = useState(false);
+  const [isIdlePaused, setIsIdlePaused] = useState(false);
+  const [dailyReadingMinutes, setDailyReadingMinutes] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem('berno_daily_reading_mins');
+      return saved ? parseInt(saved, 10) || 0 : 0;
+    } catch {
+      return 0;
+    }
+  });
+  const [dailyGoalMinutes, setDailyGoalMinutes] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem('berno_daily_goal_mins');
+      return saved ? parseInt(saved, 10) || 30 : 30;
+    } catch {
+      return 30;
+    }
+  });
+  const [fontSize, setFontSize] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem('berno_readability_font_size');
+      return saved ? parseInt(saved, 10) || 18 : 18;
+    } catch {
+      return 18;
+    }
+  });
+  const [isSoftKeyboardOpen, setIsSoftKeyboardOpen] = useState(false);
+  const [isTableOfContentsOpen, setIsTableOfContentsOpen] = useState(false);
+  const [isFocusZen, setIsFocusZen] = useState(false);
+
+  // Creative Studio Picker Modal state (3 generative options)
+  const [isStudioPickerOpen, setIsStudioPickerOpen] = useState(false);
+  const [studioInitialTab, setStudioInitialTab] = useState<StudioTab>('create_image');
 
   const readAloud = useReadAloud();
 
@@ -58,6 +142,10 @@ export default function App() {
   }, [conversations]);
 
   useEffect(() => {
+    saveReadingList(readingList);
+  }, [readingList]);
+
+  useEffect(() => {
     saveActiveConversationId(activeId);
   }, [activeId]);
 
@@ -65,9 +153,201 @@ export default function App() {
     saveSelectedMode(selectedMode);
   }, [selectedMode]);
 
+  // Focus Session active engagement listener: auto-pauses when scrolling away, idle (>10s), or tab blurred
+  useEffect(() => {
+    if (!readabilityMode) return;
+
+    let idleTimeout: NodeJS.Timeout | null = null;
+    const IDLE_THRESHOLD_MS = 10000; // 10s of inactivity pauses the focus session timer
+
+    const handleUserActivity = () => {
+      setIsIdlePaused(false);
+      if (idleTimeout) clearTimeout(idleTimeout);
+      idleTimeout = setTimeout(() => {
+        setIsIdlePaused(true);
+      }, IDLE_THRESHOLD_MS);
+    };
+
+    // Initialize idle timer
+    idleTimeout = setTimeout(() => {
+      setIsIdlePaused(true);
+    }, IDLE_THRESHOLD_MS);
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        setIsIdlePaused(true);
+      } else {
+        handleUserActivity();
+      }
+    };
+
+    const handleBlur = () => {
+      setIsIdlePaused(true);
+    };
+
+    const handleFocus = () => {
+      handleUserActivity();
+    };
+
+    const scrollContainer = scrollContainerRef.current;
+    if (scrollContainer) {
+      scrollContainer.addEventListener('scroll', handleUserActivity, { passive: true });
+    }
+    window.addEventListener('scroll', handleUserActivity, { passive: true });
+    window.addEventListener('mousemove', handleUserActivity, { passive: true });
+    window.addEventListener('mousedown', handleUserActivity, { passive: true });
+    window.addEventListener('keydown', handleUserActivity, { passive: true });
+    window.addEventListener('touchstart', handleUserActivity, { passive: true });
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('blur', handleBlur);
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      if (idleTimeout) clearTimeout(idleTimeout);
+      if (scrollContainer) {
+        scrollContainer.removeEventListener('scroll', handleUserActivity);
+      }
+      window.removeEventListener('scroll', handleUserActivity);
+      window.removeEventListener('mousemove', handleUserActivity);
+      window.removeEventListener('mousedown', handleUserActivity);
+      window.removeEventListener('keydown', handleUserActivity);
+      window.removeEventListener('touchstart', handleUserActivity);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('blur', handleBlur);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [readabilityMode]);
+
+  // Focus Session Timer ticker (increments active seconds when active, reading, not paused, not idle)
+  useEffect(() => {
+    if (!readabilityMode || !isFocusActive || isFocusPaused || isIdlePaused) {
+      return;
+    }
+
+    const timer = setInterval(() => {
+      setFocusActiveSeconds((prev) => {
+        const next = prev + 1;
+        if (next > 0 && next % 60 === 0) {
+          setDailyReadingMinutes((dailyPrev) => {
+            const updated = dailyPrev + 1;
+            try {
+              localStorage.setItem('berno_daily_reading_mins', String(updated));
+            } catch {}
+            return updated;
+          });
+        }
+        return next;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [readabilityMode, isFocusActive, isFocusPaused, isIdlePaused]);
+
   // Current active conversation
   const currentConversation = conversations.find((c) => c.id === activeId) || null;
   const messages = currentConversation ? currentConversation.messages : [];
+
+  // Toggle bookmark / Read Later status for a message
+  const handleToggleBookmark = (message: Message) => {
+    const isBookmarked = readingList.some((item) => item.messageId === message.id);
+    if (isBookmarked) {
+      const updated = readingList.filter((item) => item.messageId !== message.id);
+      setReadingList(updated);
+      saveReadingList(updated);
+      setToastMessage('Removed from Reading List');
+      setTimeout(() => setToastMessage(null), 2500);
+    } else {
+      const activeConv = conversations.find((c) => c.id === activeId);
+      const rawText = message.content || message.rawContent || '';
+      const clean = rawText.replace(/<thinking>[\s\S]*?<\/thinking>/gi, '').trim();
+      const snippet = clean.length > 220 ? clean.slice(0, 217) + '...' : clean;
+      const wordCount = calculateWordCount(clean);
+      const readingTime = calculateReadingTime(clean, 250);
+
+      const newItem: ReadingListItem = {
+        id: `bm-${Date.now()}-${message.id.slice(-6)}`,
+        messageId: message.id,
+        conversationId: activeId || '',
+        conversationTitle: activeConv?.title || 'Editorial Inquiry',
+        role: message.role,
+        snippet: snippet || 'Editorial Insight',
+        fullContent: message.content,
+        timestamp: message.timestamp,
+        bookmarkedAt: Date.now(),
+        wordCount,
+        readingTimeDisplay: readingTime.display,
+        mode: message.mode || activeConv?.mode,
+        chatbotRole: message.chatbotRole || activeConv?.chatbotRole,
+      };
+
+      const updated = [newItem, ...readingList];
+      setReadingList(updated);
+      saveReadingList(updated);
+      setToastMessage('Pinned to Reading List');
+      setTimeout(() => setToastMessage(null), 2500);
+    }
+  };
+
+  const handleRemoveFromReadingList = (messageId: string) => {
+    const updated = readingList.filter((item) => item.messageId !== messageId);
+    setReadingList(updated);
+    saveReadingList(updated);
+    setToastMessage('Removed from Reading List');
+    setTimeout(() => setToastMessage(null), 2000);
+  };
+
+  const handleNavigateToBookmark = (item: ReadingListItem) => {
+    if (activeId !== item.conversationId) {
+      setActiveId(item.conversationId);
+      saveActiveConversationId(item.conversationId);
+    }
+
+    if (window.innerWidth < 768) {
+      setIsSidebarOpen(false);
+    }
+
+    // Scroll to the message element and pulse it
+    const delay = activeId !== item.conversationId ? 260 : 60;
+    setTimeout(() => {
+      const targetEl = document.getElementById(`message-card-${item.messageId}`);
+      if (targetEl) {
+        targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        targetEl.classList.remove('reading-list-highlight');
+        // Trigger reflow for animation restart
+        void targetEl.offsetWidth;
+        targetEl.classList.add('reading-list-highlight');
+        setTimeout(() => {
+          targetEl.classList.remove('reading-list-highlight');
+        }, 2800);
+      }
+    }, delay);
+  };
+
+  const handleOpenReadingList = () => {
+    setActiveSidebarTab('reading_list');
+    setIsSidebarOpen(true);
+  };
+
+  // Track recently viewed conversation in Reading History whenever activeId changes
+  useEffect(() => {
+    if (activeId) {
+      const updated = recordConversationView(activeId);
+      setReadingHistory(updated);
+    }
+  }, [activeId]);
+
+  const handleRemoveFromReadingHistory = (convId: string) => {
+    const updated = readingHistory.filter((item) => item.conversationId !== convId);
+    setReadingHistory(updated);
+    saveReadingHistory(updated);
+    showToast('Removed from reading history.');
+  };
+
+  const handleClearReadingHistory = () => {
+    clearReadingHistory();
+    setReadingHistory([]);
+    showToast('Reading history cleared.');
+  };
 
   // Responsive sidebar initial state
   useEffect(() => {
@@ -117,8 +397,12 @@ export default function App() {
     return newConv;
   };
 
-  const handleSend = async (text: string, mode: ThinkingMode = selectedMode) => {
-    if (!text.trim() || isStreaming) return;
+  const handleSend = async (
+    text: string,
+    mode: ThinkingMode = selectedMode,
+    attachedImage?: string
+  ) => {
+    if ((!text.trim() && !attachedImage) || isStreaming) return;
 
     let targetConv = currentConversation;
     let newConversations = [...conversations];
@@ -126,7 +410,7 @@ export default function App() {
     const isFirstExchange = targetConv ? targetConv.messages.length === 0 : true;
 
     if (!targetConv) {
-      targetConv = createNewConversation(text, mode);
+      targetConv = createNewConversation(text || 'Visual Inquiry', mode);
       newConversations = [targetConv, ...newConversations];
       setActiveId(targetConv.id);
     }
@@ -139,6 +423,7 @@ export default function App() {
       mode,
       model: selectedModel,
       researchMode,
+      attachedImage,
     };
 
     const assistantPlaceholderId = 'msg_' + (Date.now() + 1) + '_assistant';
@@ -179,6 +464,7 @@ export default function App() {
           messages: updatedMessages.slice(0, -1).map((m) => ({
             role: m.role,
             content: m.content,
+            attachedImage: m.attachedImage,
           })),
           mode,
           model: selectedModel,
@@ -546,9 +832,66 @@ export default function App() {
     }
   };
 
-  const handleExportMarkdown = () => {
-    handleExport();
-    showToast('Markdown document exported.');
+  const handleLoginSuccess = (authenticatedUser: User) => {
+    setUser(authenticatedUser);
+    try {
+      localStorage.setItem('berno_auth_user', JSON.stringify(authenticatedUser));
+    } catch {}
+    showToast(`Welcome back, ${authenticatedUser.name}.`);
+  };
+
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+    } catch {}
+    try {
+      localStorage.removeItem('berno_auth_user');
+      localStorage.removeItem('berno_auth_token');
+    } catch {}
+    setUser(null);
+    showToast('Signed out of Berno.');
+  };
+
+  const handleExportMarkdown = async () => {
+    if (!currentConversation || currentConversation.messages.length === 0) {
+      showToast('No messages in active conversation to export.');
+      return;
+    }
+    setIsExportingMarkdown(true);
+    setExportProgress(15);
+    const progressInterval = setInterval(() => {
+      setExportProgress((prev) => {
+        if (prev >= 90) return prev;
+        const inc = Math.floor(Math.random() * 12) + 5;
+        return Math.min(92, prev + inc);
+      });
+    }, 240);
+
+    try {
+      showToast('Synthesizing Session Executive Summary with AI...');
+      const summary = await fetchSessionExecutiveSummary(currentConversation);
+      setExportProgress(95);
+      if (summary && !currentConversation.executiveSummary) {
+        setConversations((prev) =>
+          prev.map((c) =>
+            c.id === currentConversation.id ? { ...c, executiveSummary: summary } : c
+          )
+        );
+      }
+      handleExport(summary);
+      setExportProgress(100);
+      showToast('Markdown document with Executive Summary & References exported.');
+    } catch (err: any) {
+      console.error('Markdown export error:', err);
+      handleExport();
+      showToast('Markdown document exported.');
+    } finally {
+      clearInterval(progressInterval);
+      setTimeout(() => {
+        setIsExportingMarkdown(false);
+        setExportProgress(0);
+      }, 500);
+    }
   };
 
   const handleExportJson = () => {
@@ -563,62 +906,232 @@ export default function App() {
       return;
     }
     setIsExportingPdf(true);
+    setExportProgress(15);
+    const progressInterval = setInterval(() => {
+      setExportProgress((prev) => {
+        if (prev >= 90) return prev;
+        const inc = Math.floor(Math.random() * 12) + 5;
+        return Math.min(92, prev + inc);
+      });
+    }, 260);
+
     try {
+      showToast('Synthesizing Session Executive Summary with AI...');
+      const summary = await fetchSessionExecutiveSummary(currentConversation);
+      setExportProgress(88);
+      if (summary && !currentConversation.executiveSummary) {
+        setConversations((prev) =>
+          prev.map((c) =>
+            c.id === currentConversation.id ? { ...c, executiveSummary: summary } : c
+          )
+        );
+      }
       await exportConversationToPdf(currentConversation, {
         theme: 'editorial_dark',
         includeThinking: true,
+        executiveSummary: summary,
       });
-      showToast('Editorial Berno PDF document downloaded.');
+      setExportProgress(100);
+      showToast('Editorial Berno PDF document with Executive Summary downloaded.');
     } catch (err: any) {
       console.error('PDF export error:', err);
       showToast('Error exporting PDF: ' + (err?.message || 'Check console'));
     } finally {
-      setIsExportingPdf(false);
+      clearInterval(progressInterval);
+      setTimeout(() => {
+        setIsExportingPdf(false);
+        setExportProgress(0);
+      }, 500);
     }
   };
 
   const handleCloseAllModals = () => {
     setIsAboutModalOpen(false);
+    setIsAuthModalOpen(false);
     setIsVoiceModalOpen(false);
     setIsVeoModalOpen(false);
+    setIsStudioPickerOpen(false);
+    setIsReaderDashboardOpen(false);
+    setIsSoftKeyboardOpen(false);
+    setIsTableOfContentsOpen(false);
+    setIsFocusZen(false);
   };
 
-  // Editorial global keyboard shortcuts (Ctrl+K, Ctrl+Shift+S, Esc, Ctrl+S)
+  const handleNavigateToHeading = (_messageId: string, headingText: string) => {
+    setIsTableOfContentsOpen(false);
+    if (!scrollContainerRef.current) return;
+    const headings = scrollContainerRef.current.querySelectorAll('h1, h2, h3, h4');
+    for (let i = 0; i < headings.length; i++) {
+      const h = headings[i];
+      if (h.textContent?.toLowerCase().includes(headingText.toLowerCase())) {
+        h.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        break;
+      }
+    }
+  };
+
+  const handleShareEmail = () => {
+    if (!currentConversation) return;
+    const title = encodeURIComponent(`Berno Inquiry: ${currentConversation.title}`);
+    const summary = currentConversation.messages
+      .slice(0, 4)
+      .map((m) => `${m.role.toUpperCase()}: ${m.content.slice(0, 150)}...`)
+      .join('\n\n');
+    const appUrl = window.location.href;
+    const body = encodeURIComponent(
+      `Berno Inquiry Session Summary:\n\nTitle: ${currentConversation.title}\nStance: ${currentConversation.mode}\n\n${summary}\n\nExplore on Berno:\n${appUrl}`
+    );
+    window.location.href = `mailto:?subject=${title}&body=${body}`;
+  };
+
+  const handleToggleReadabilityMode = () => {
+    setReadabilityMode((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('berno_readability_mode', String(next));
+      } catch {}
+      if (next) {
+        setIsSidebarOpen(false);
+        showToast('Readability Mode active: sidebar hidden & elegant serif typography enabled.');
+      } else {
+        showToast('Readability Mode disabled.');
+      }
+      return next;
+    });
+  };
+
+  // Editorial global keyboard shortcuts (Ctrl+K, Ctrl+Shift+S, Esc, Ctrl+S, Alt+R)
   useKeyboardShortcuts({
     onNewChat: handleNewChat,
     onToggleSidebar: () => setIsSidebarOpen((prev) => !prev),
     onCloseModals: handleCloseAllModals,
     onExportPdf: handleExportPdf,
     onSaveChat: handleSaveChat,
+    onToggleReadabilityMode: handleToggleReadabilityMode,
   });
 
-  const handleExport = () => {
+  // Consolidated grounding sources across the entire conversation for citation tooltips & cross-references
+  const allConversationSources = useMemo(() => {
+    if (!currentConversation) return [];
+    const list: GroundingSource[] = [];
+    const seenUrls = new Set<string>();
+    for (const msg of currentConversation.messages) {
+      if (msg.groundingSources && Array.isArray(msg.groundingSources)) {
+        for (const s of msg.groundingSources) {
+          if (!s || !s.url) continue;
+          const norm = s.url.trim().toLowerCase();
+          if (!seenUrls.has(norm)) {
+            seenUrls.add(norm);
+            list.push(s);
+          }
+        }
+      }
+    }
+    return list;
+  }, [currentConversation]);
+
+  const handleExport = (executiveSummary?: string) => {
     if (!currentConversation || currentConversation.messages.length === 0) return;
 
     let md = `# ${currentConversation.title}\n\n`;
     md += `*Session Timestamp: ${new Date(currentConversation.createdAt).toLocaleString()}*\n`;
-    md += `*Cognitive Stance: ${currentConversation.mode}*\n\n---\n\n`;
+    md += `*Cognitive Stance: ${currentConversation.mode}*\n\n`;
 
+    const summaryToInclude = executiveSummary || currentConversation.executiveSummary;
+    if (summaryToInclude && summaryToInclude.trim()) {
+      md += `## Session Executive Summary\n\n`;
+      md += `> *AI-generated architectural synthesis based on the complete conversation thread.*\n\n`;
+      md += `${summaryToInclude.trim()}\n\n`;
+      md += `---\n\n`;
+    } else {
+      md += `---\n\n`;
+    }
+
+    // Collect and de-duplicate all grounding source citations across the entire conversation
+    const collectedReferences: Array<GroundingSource & { citedInTurns: number[] }> = [];
+    const urlToReferenceIndex = new Map<string, number>();
+
+    let turnCounter = 0;
     for (const msg of currentConversation.messages) {
       if (msg.role === 'user') {
-        md += `### Inquiry\n\n${msg.content}\n\n`;
+        turnCounter++;
+      } else if (msg.groundingSources && Array.isArray(msg.groundingSources)) {
+        const currentTurn = turnCounter || 1;
+        for (const s of msg.groundingSources) {
+          if (!s || !s.url) continue;
+          const normalizedUrl = s.url.trim().toLowerCase();
+          if (urlToReferenceIndex.has(normalizedUrl)) {
+            const existingIdx = urlToReferenceIndex.get(normalizedUrl)!;
+            if (!collectedReferences[existingIdx].citedInTurns.includes(currentTurn)) {
+              collectedReferences[existingIdx].citedInTurns.push(currentTurn);
+            }
+          } else {
+            const newIndex = collectedReferences.length;
+            urlToReferenceIndex.set(normalizedUrl, newIndex);
+            collectedReferences.push({
+              ...s,
+              citedInTurns: [currentTurn],
+            });
+          }
+        }
+      }
+    }
+
+    let currentTurnIndex = 0;
+    for (const msg of currentConversation.messages) {
+      if (msg.role === 'user') {
+        currentTurnIndex++;
+        md += `### Inquiry [${currentTurnIndex}]\n\n${msg.content}\n\n`;
       } else {
-        md += `### Berno Cognitive Synthesis\n\n`;
+        md += `### Berno Cognitive Synthesis [${currentTurnIndex || 1}]\n\n`;
         if (msg.thinkingContent) {
           md += `<details><summary>Thought Arc</summary>\n\n${msg.thinkingContent}\n\n</details>\n\n`;
         }
         md += `${msg.content}\n\n`;
 
         if (msg.groundingSources && msg.groundingSources.length > 0) {
-          md += `**Google Search & Real-Time Sources:**\n`;
-          msg.groundingSources.forEach((s, idx) => {
-            md += `- [${idx + 1}] [${s.title}](${s.url}) (${s.hostname || 'web'})\n`;
+          md += `**Turn Citations:**\n`;
+          msg.groundingSources.forEach((s) => {
+            const normalizedUrl = s.url?.trim().toLowerCase();
+            const refNum =
+              normalizedUrl && urlToReferenceIndex.has(normalizedUrl)
+                ? urlToReferenceIndex.get(normalizedUrl)! + 1
+                : null;
+            const refTag = refNum !== null ? ` [Ref ${refNum}]` : '';
+            md += `- [${s.title || 'Citation'}](${s.url}) (${s.hostname || 'web'})${refTag}\n`;
           });
           md += `\n`;
         }
 
         md += `---\n\n`;
       }
+    }
+
+    // Consolidated 'References' section at the end of the markdown export
+    if (collectedReferences.length > 0) {
+      md += `## References\n\n`;
+      md += `*The following grounding source citations were verified and synthesized throughout this inquiry session:*\n\n`;
+
+      collectedReferences.forEach((ref, idx) => {
+        const refNum = idx + 1;
+        const title = (ref.title || ref.hostname || 'Source Citation').trim();
+        const host = ref.hostname ? ` — *${ref.hostname}*` : '';
+        const turns =
+          ref.citedInTurns.length > 0
+            ? ` *(Cited in ${
+                ref.citedInTurns.length === 1
+                  ? `Inquiry ${ref.citedInTurns[0]}`
+                  : `Inquiries ${ref.citedInTurns.join(', ')}`
+              })*`
+            : '';
+
+        md += `${refNum}. **[${title}](${ref.url})**${host}${turns}\n`;
+        if (ref.snippet && ref.snippet.trim()) {
+          const cleanSnippet = ref.snippet.trim().replace(/\s+/g, ' ');
+          md += `   > "${cleanSnippet}"\n`;
+        }
+        md += `\n`;
+      });
     }
 
     const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
@@ -653,6 +1166,17 @@ export default function App() {
         onAutoSummarize={handleAutoSummarize}
         summarizingId={summarizingId}
         onUpdateTags={handleUpdateTags}
+        readingList={readingList}
+        onRemoveFromReadingList={handleRemoveFromReadingList}
+        onNavigateToBookmark={handleNavigateToBookmark}
+        activeSidebarTab={activeSidebarTab}
+        onTabChange={setActiveSidebarTab}
+        readingHistory={readingHistory}
+        onRemoveFromReadingHistory={handleRemoveFromReadingHistory}
+        onClearReadingHistory={handleClearReadingHistory}
+        user={user}
+        onOpenAuth={() => setIsAuthModalOpen(true)}
+        onLogout={handleLogout}
       />
 
       {/* Main Cognitive Stage */}
@@ -668,14 +1192,28 @@ export default function App() {
           onExportJson={handleExportJson}
           onSaveChat={handleSaveChat}
           isExportingPdf={isExportingPdf}
+          isExportingMarkdown={isExportingMarkdown}
+          exportProgress={exportProgress}
+          user={user}
+          onOpenAuth={() => setIsAuthModalOpen(true)}
+          onLogout={handleLogout}
           hasActiveConversation={Boolean(currentConversation && currentConversation.messages.length > 0)}
           onOpenVoice={() => setIsVoiceModalOpen(true)}
-          onOpenVeo={() => setIsVeoModalOpen(true)}
           currentMode={selectedMode}
           selectedModel={selectedModel}
           onChangeModel={setSelectedModel}
           chatbotRole={chatbotRole}
           onChangeChatbotRole={setChatbotRole}
+          readabilityMode={readabilityMode}
+          onToggleReadabilityMode={handleToggleReadabilityMode}
+          readingListCount={readingList.length}
+          onOpenReadingList={handleOpenReadingList}
+          isFocusZen={isFocusZen}
+          onToggleFocusZen={() => setIsFocusZen((prev) => !prev)}
+          onOpenReaderDashboard={() => setIsReaderDashboardOpen(true)}
+          onToggleTableOfContents={() => setIsTableOfContentsOpen((prev) => !prev)}
+          isTableOfContentsOpen={isTableOfContentsOpen}
+          onShareEmail={handleShareEmail}
         />
 
         {/* Dynamic Scroll Progress Bar for Active Dialogue */}
@@ -683,12 +1221,33 @@ export default function App() {
           scrollContainerRef={scrollContainerRef}
           hasMessages={messages.length > 0}
           isStreaming={isStreaming}
+          messages={messages}
         />
+
+        {/* Focus Zen exit button when in distraction-free mode */}
+        {isFocusZen && (
+          <div className="absolute top-4 right-4 z-40 animate-in fade-in duration-200">
+            <button
+              onClick={() => setIsFocusZen(false)}
+              className="flex items-center gap-1.5 rounded-full border border-[#d4af37]/40 bg-[#0c0e14]/90 px-3 py-1 font-mono text-xs text-[#f5ebd7] shadow-xl backdrop-blur-md hover:bg-[#d4af37]/20 transition-all"
+            >
+              <span>Exit Focus Zen</span>
+              <span className="text-[10px] text-neutral-400 font-mono">(Esc)</span>
+            </button>
+          </div>
+        )}
 
         {/* Message Stream Area */}
         <div
           ref={scrollContainerRef}
-          className="flex-1 overflow-y-auto px-4 py-6 scroll-smooth"
+          className={`flex-1 overflow-y-auto px-4 py-6 scroll-smooth transition-colors duration-300 ${
+            readabilityMode ? 'bg-[#090b0e]' : ''
+          }`}
+          style={
+            {
+              '--readability-font-size': `${fontSize}px`,
+            } as React.CSSProperties
+          }
         >
           {messages.length === 0 ? (
             <EmptyState
@@ -698,16 +1257,24 @@ export default function App() {
               }}
             />
           ) : (
-            <div className="mx-auto max-w-4xl">
+            <div className={`mx-auto transition-all duration-300 ${
+              readabilityMode ? 'max-w-5xl px-2 sm:px-6' : 'max-w-4xl'
+            }`}>
               {messages.map((msg, index) => (
                 <MessageItem
                   key={msg.id}
                   message={msg}
+                  messageIndex={index}
+                  allMessages={messages}
+                  allConversationSources={allConversationSources}
                   isLast={index === messages.length - 1}
                   onRegenerate={handleRegenerate}
                   onFork={handleFork}
                   onDeleteMessage={handleDeleteMessage}
                   readAloud={readAloud}
+                  readabilityMode={readabilityMode}
+                  isBookmarked={readingList.some((item) => item.messageId === msg.id)}
+                  onToggleBookmark={handleToggleBookmark}
                 />
               ))}
               <div ref={messagesEndRef} className="h-4" />
@@ -715,27 +1282,36 @@ export default function App() {
           )}
         </div>
 
-        {/* Input Dock */}
-        <ChatInput
-          onSend={(text, mode) => handleSend(text, mode)}
-          onStop={handleStop}
-          isStreaming={isStreaming}
-          selectedMode={selectedMode}
-          onSelectMode={handleSelectMode}
-          researchMode={researchMode}
-          onToggleResearchMode={setResearchMode}
-          chatbotRole={chatbotRole}
-          onChangeChatbotRole={setChatbotRole}
-          onOpenVoice={() => setIsVoiceModalOpen(true)}
-          onOpenVeo={() => setIsVeoModalOpen(true)}
-          selectedModel={selectedModel}
-        />
+        {/* Input Dock (hidden in Focus Zen) */}
+        {!isFocusZen && (
+          <ChatInput
+            onSend={(text, mode, image) => handleSend(text, mode, image)}
+            onStop={handleStop}
+            isStreaming={isStreaming}
+            selectedMode={selectedMode}
+            onSelectMode={handleSelectMode}
+            researchMode={researchMode}
+            onToggleResearchMode={setResearchMode}
+            chatbotRole={chatbotRole}
+            onChangeChatbotRole={setChatbotRole}
+            onOpenVoice={() => setIsVoiceModalOpen(true)}
+            selectedModel={selectedModel}
+            readabilityMode={readabilityMode}
+          />
+        )}
       </div>
 
       {/* Architectural Intellect Explainer Modal */}
       <AboutModal
         isOpen={isAboutModalOpen}
         onClose={() => setIsAboutModalOpen(false)}
+      />
+
+      {/* Epistemic Scholar Authentication Modal (Sign In / Register) */}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        onLoginSuccess={handleLoginSuccess}
       />
 
       {/* Gemini Live Audio Voice Conversation Modal */}
@@ -745,10 +1321,79 @@ export default function App() {
         initialRole={chatbotRole}
       />
 
-      {/* Veo 3 Video Studio Modal */}
+      {/* Creative Media Studio 3-Option Picker Modal */}
+      <CreativeStudioPickerModal
+        isOpen={isStudioPickerOpen}
+        onClose={() => setIsStudioPickerOpen(false)}
+        onSelectOption={(tab) => {
+          setStudioInitialTab(tab);
+          setIsVeoModalOpen(true);
+        }}
+      />
+
+      {/* Veo 3 Video & Image Studio Modal */}
       <VeoVideoStudioModal
         isOpen={isVeoModalOpen}
         onClose={() => setIsVeoModalOpen(false)}
+        initialTab={studioInitialTab}
+      />
+
+      {/* Reader Dashboard Modal with Focus Session Timer & Daily Goal Ring */}
+      <ReaderDashboardModal
+        isOpen={isReaderDashboardOpen}
+        onClose={() => setIsReaderDashboardOpen(false)}
+        focusActiveSeconds={focusActiveSeconds}
+        isFocusActive={isFocusActive}
+        isFocusPaused={isFocusPaused}
+        isIdlePaused={isIdlePaused}
+        onToggleFocusTimer={() => setIsFocusPaused((prev) => !prev)}
+        onResetFocusTimer={() => setFocusActiveSeconds(0)}
+        dailyReadingMinutes={dailyReadingMinutes}
+        dailyArticlesFinished={conversations.length}
+        dailyWordsRead={messages.reduce(
+          (acc, m) => acc + (m.content ? m.content.split(/\s+/).length : 0),
+          0
+        )}
+        dailyGoalMinutes={dailyGoalMinutes}
+        onChangeDailyGoal={(mins) => {
+          setDailyGoalMinutes(mins);
+          try {
+            localStorage.setItem('berno_daily_goal_mins', String(mins));
+          } catch {}
+        }}
+        fontSize={fontSize}
+        onChangeFontSize={(size) => {
+          setFontSize(size);
+          try {
+            localStorage.setItem('berno_readability_font_size', String(size));
+          } catch {}
+        }}
+        onToggleSoftKeyboard={() => setIsSoftKeyboardOpen((prev) => !prev)}
+        isSoftKeyboardOpen={isSoftKeyboardOpen}
+        onExportStatsPdf={handleExportPdf}
+        isExportingPdf={isExportingPdf}
+      />
+
+      {/* Soft Keyboard Overlay for Readability Note-Taking */}
+      <SoftKeyboardOverlay
+        isOpen={isSoftKeyboardOpen}
+        onClose={() => setIsSoftKeyboardOpen(false)}
+        onSendToChat={(text) => handleSend(text, selectedMode)}
+      />
+
+      {/* Table of Contents Section Navigator */}
+      <TableOfContents
+        isOpen={isTableOfContentsOpen}
+        onClose={() => setIsTableOfContentsOpen(false)}
+        messages={messages}
+        onNavigateToHeading={handleNavigateToHeading}
+      />
+
+      {/* Scholar Authentication Modal */}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        onLoginSuccess={handleLoginSuccess}
       />
     </div>
   );

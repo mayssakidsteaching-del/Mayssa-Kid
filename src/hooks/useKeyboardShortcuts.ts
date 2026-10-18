@@ -6,6 +6,7 @@ export interface KeyboardShortcutHandlers {
   onCloseModals?: () => void;
   onExportPdf?: () => void;
   onSaveChat?: () => void;
+  onToggleReadabilityMode?: () => void;
 }
 
 /**
@@ -14,6 +15,7 @@ export interface KeyboardShortcutHandlers {
  * - 'Ctrl + Shift + S' / 'Cmd + Shift + S': Toggle navigation sidebar
  * - 'Esc': Close any open dialogs / modals
  * - 'Ctrl + S' / 'Cmd + S': Save chat
+ * - 'Alt + R': Toggle Readability Mode
  */
 export function useKeyboardShortcuts({
   onNewChat,
@@ -21,6 +23,7 @@ export function useKeyboardShortcuts({
   onCloseModals,
   onExportPdf,
   onSaveChat,
+  onToggleReadabilityMode,
 }: KeyboardShortcutHandlers) {
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -32,6 +35,14 @@ export function useKeyboardShortcuts({
           event.preventDefault();
           onCloseModals();
         }
+        return;
+      }
+
+      // Alt + R or Ctrl + Shift + R: Toggle Readability Mode
+      if ((event.altKey && (event.key === 'r' || event.key === 'R')) ||
+          (isCtrlOrCmd && event.shiftKey && (event.key === 'r' || event.key === 'R'))) {
+        event.preventDefault();
+        onToggleReadabilityMode?.();
         return;
       }
 

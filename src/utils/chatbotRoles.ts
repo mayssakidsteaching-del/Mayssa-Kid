@@ -42,18 +42,10 @@ export interface ModelOption {
 
 export const AVAILABLE_MODELS: ModelOption[] = [
   {
-    id: 'gemini-3.8-flash',
-    name: 'Gemini 3.8 Flash',
-    badge: 'Fast & Smart',
-    description: 'Next-generation intelligent model with high throughput, instant reasoning, and real-time synthesis.',
-    useCase: 'Primary text tasks, rapid high-intelligence dialogue',
-    tag: 'flash',
-  },
-  {
     id: 'gemini-3.1-pro-preview',
     name: 'Gemini 3.1 Pro',
     badge: 'Complex Tasks',
-    description: 'State-of-the-art reasoning for demanding intellectual inquiries, math, coding, and deep architecture.',
+    description: 'State-of-the-art reasoning for particularly complex tasks, advanced mathematics, systems architecture, and deep analytical proofs.',
     useCase: 'Complex tasks, deep reasoning & architecture',
     tag: 'pro',
   },
@@ -61,16 +53,24 @@ export const AVAILABLE_MODELS: ModelOption[] = [
     id: 'gemini-3.5-flash',
     name: 'Gemini 3.5 Flash',
     badge: 'General Tasks',
-    description: 'High-speed, high-intelligence model optimal for everyday multi-turn conversations and thorough synthesis.',
+    description: 'Versatile, high-intelligence model optimal for general everyday tasks, multi-turn conversational dialogue, and high-density synthesis.',
     useCase: 'General tasks, versatile reasoning & speed',
     tag: 'flash',
   },
   {
     id: 'gemini-3.1-flash-lite',
     name: 'Gemini 3.1 Flash-Lite',
-    badge: 'Fast Speed',
-    description: 'Ultra-fast execution with minimal latency for rapid queries, high-throughput answers, and immediate feedback.',
-    useCase: 'Fast tasks, ultra-responsive dialogue',
+    badge: 'Fast Tasks',
+    description: 'Lightweight execution engine engineered for tasks that should happen fast with near-zero latency and immediate feedback.',
+    useCase: 'Tasks that should happen fast, ultra-responsive dialogue',
     tag: 'lite',
+  },
+  {
+    id: 'gemini-3.8-flash',
+    name: 'Gemini 3.8 Flash',
+    badge: 'Cognitive Flash',
+    description: 'Flagship reasoning model with extended thinking budget (8k tokens) for axiomatic deconstruction and pedagogical architecture.',
+    useCase: 'Cognitive thinking arc, axiomatic deduction',
+    tag: 'flash',
   },
 ];

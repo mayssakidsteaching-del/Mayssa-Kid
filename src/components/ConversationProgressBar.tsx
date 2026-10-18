@@ -1,21 +1,29 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { Message } from '../types';
+import { calculateConversationStats } from '../utils/readingTime';
 
 interface ConversationProgressBarProps {
   scrollContainerRef: React.RefObject<HTMLDivElement | null>;
   hasMessages: boolean;
   isStreaming?: boolean;
+  messages?: Message[];
 }
 
 export function ConversationProgressBar({
   scrollContainerRef,
   hasMessages,
   isStreaming = false,
+  messages = [],
 }: ConversationProgressBarProps) {
   const [scrollProgress, setScrollProgress] = useState(0);
   const [isScrollable, setIsScrollable] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [hoverPosition, setHoverPosition] = useState<number | null>(null);
   const barRef = useRef<HTMLDivElement>(null);
+
+  const stats = useMemo(() => {
+    return messages.length > 0 ? calculateConversationStats(messages, 250) : null;
+  }, [messages]);
 
   const calculateProgress = useCallback(() => {
     const el = scrollContainerRef.current;
@@ -128,7 +136,11 @@ export function ConversationProgressBar({
       style={{
         height: isHovered ? '5px' : '2.5px',
       }}
-      title={isVisible ? `Scroll depth: ${Math.round(scrollProgress)}% • Click to navigate` : undefined}
+      title={
+        isVisible
+          ? `Scroll depth: ${Math.round(scrollProgress)}%${stats ? ` • Reading duration: ${stats.formattedTotal}` : ''} • Click to navigate`
+          : undefined
+      }
       role="progressbar"
       aria-valuenow={Math.round(scrollProgress)}
       aria-valuemin={0}
@@ -151,12 +163,13 @@ export function ConversationProgressBar({
       {/* Floating editorial depth indicator on hover */}
       {isHovered && hoverPosition !== null && (
         <div
-          className="pointer-events-none absolute -bottom-7 -translate-x-1/2 rounded border border-[#d4af37]/30 bg-[#0e1118]/95 px-2 py-0.5 font-mono text-[10px] text-[#f3e7cb] shadow-xl backdrop-blur-md transition-transform duration-75 animate-in fade-in"
+          className="pointer-events-none absolute -bottom-7 -translate-x-1/2 whitespace-nowrap rounded border border-[#d4af37]/30 bg-[#0e1118]/95 px-2.5 py-0.5 font-mono text-[10px] text-[#f3e7cb] shadow-xl backdrop-blur-md transition-transform duration-75 animate-in fade-in"
           style={{
             left: `${hoverPosition}%`,
           }}
         >
-          <span>{Math.round(hoverPosition)}%</span>
+          <span>{Math.round(hoverPosition)}% scroll</span>
+          {stats && <span className="ml-1.5 text-neutral-400">• {stats.formattedTotal}</span>}
         </div>
       )}
     </div>

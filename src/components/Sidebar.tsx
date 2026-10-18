@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react';
-import { Conversation } from '../types';
+import { useState, useMemo, useEffect } from 'react';
+import { Conversation, ReadingListItem, ReadingHistoryItem, User } from '../types';
 import {
   Plus,
   Search,
@@ -12,9 +12,16 @@ import {
   Sparkles,
   FileText,
   Tag as TagIcon,
+  Bookmark,
+  Clock,
+  User as UserIcon,
+  LogOut,
+  LogIn,
 } from 'lucide-react';
 import { TagPicker } from './TagPicker';
 import { getTagStyle, normalizeTag, PRESET_TAGS } from '../utils/tagUtils';
+import { ReadingListView } from './ReadingListView';
+import { ReadingHistoryView } from './ReadingHistoryView';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -29,6 +36,17 @@ interface SidebarProps {
   onAutoSummarize?: (id: string) => void;
   summarizingId?: string | null;
   onUpdateTags?: (id: string, tags: string[]) => void;
+  readingList?: ReadingListItem[];
+  onRemoveFromReadingList?: (messageId: string) => void;
+  onNavigateToBookmark?: (item: ReadingListItem) => void;
+  activeSidebarTab?: 'inquiries' | 'reading_list' | 'history';
+  onTabChange?: (tab: 'inquiries' | 'reading_list' | 'history') => void;
+  readingHistory?: ReadingHistoryItem[];
+  onRemoveFromReadingHistory?: (convId: string) => void;
+  onClearReadingHistory?: () => void;
+  user?: User | null;
+  onOpenAuth?: () => void;
+  onLogout?: () => void;
 }
 
 export function Sidebar({
@@ -44,12 +62,35 @@ export function Sidebar({
   onAutoSummarize,
   summarizingId,
   onUpdateTags,
+  readingList = [],
+  onRemoveFromReadingList,
+  onNavigateToBookmark,
+  activeSidebarTab = 'inquiries',
+  onTabChange,
+  readingHistory = [],
+  onRemoveFromReadingHistory,
+  onClearReadingHistory,
+  user = null,
+  onOpenAuth,
+  onLogout,
 }: SidebarProps) {
+  const [activeTab, setActiveTab] = useState<'inquiries' | 'reading_list' | 'history'>(activeSidebarTab);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTagFilter, setSelectedTagFilter] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState('');
   const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (activeSidebarTab) {
+      setActiveTab(activeSidebarTab);
+    }
+  }, [activeSidebarTab]);
+
+  const handleTabChange = (tab: 'inquiries' | 'reading_list' | 'history') => {
+    setActiveTab(tab);
+    if (onTabChange) onTabChange(tab);
+  };
 
   // Compute all unique tags across conversations with their frequency count
   const allTagsWithCounts = useMemo(() => {
@@ -173,8 +214,97 @@ export function Sidebar({
         </button>
       </div>
 
-      {/* New Inquiry Action */}
-      <div className="p-3">
+      {/* Mode Tabs: Inquiries vs Reading History vs Reading List */}
+      <div className="px-3 pt-2 pb-1">
+        <div className="grid grid-cols-3 rounded-xl border border-white/10 bg-[#12151c] p-1 text-xs">
+          <button
+            onClick={() => handleTabChange('inquiries')}
+            className={`flex items-center justify-center gap-1 rounded-lg py-1.5 font-medium transition-all ${
+              activeTab === 'inquiries'
+                ? 'bg-[#1e2330] text-white shadow-sm border border-white/10'
+                : 'text-neutral-400 hover:text-neutral-200'
+            }`}
+            title="All Inquiries"
+          >
+            <MessageSquare className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Inquiries</span>
+            <span className="sm:hidden">All</span>
+            <span className="font-mono text-[10px] text-neutral-500">
+              ({conversations.length})
+            </span>
+          </button>
+
+          <button
+            onClick={() => handleTabChange('history')}
+            className={`flex items-center justify-center gap-1 rounded-lg py-1.5 font-medium transition-all ${
+              activeTab === 'history'
+                ? 'bg-blue-500/20 text-blue-300 shadow-sm border border-blue-500/40 font-semibold'
+                : 'text-neutral-400 hover:text-neutral-200'
+            }`}
+            title="Reading History: Recently viewed conversations"
+          >
+            <Clock className="h-3.5 w-3.5" />
+            <span>History</span>
+            {readingHistory.length > 0 && (
+              <span className="rounded-full bg-blue-500/25 px-1.5 py-0.2 font-mono text-[10px] text-blue-300 font-semibold">
+                {readingHistory.length}
+              </span>
+            )}
+          </button>
+
+          <button
+            onClick={() => handleTabChange('reading_list')}
+            className={`flex items-center justify-center gap-1 rounded-lg py-1.5 font-medium transition-all ${
+              activeTab === 'reading_list'
+                ? 'bg-[#d4af37]/20 text-[#f3cf65] shadow-sm border border-[#d4af37]/40 font-semibold'
+                : 'text-neutral-400 hover:text-neutral-200'
+            }`}
+            title="Reading List (Saved bookmarks)"
+          >
+            <Bookmark className={`h-3.5 w-3.5 ${readingList.length > 0 ? 'fill-[#d4af37] text-[#d4af37]' : ''}`} />
+            <span className="hidden sm:inline">Saved</span>
+            <span className="sm:hidden">List</span>
+            {readingList.length > 0 && (
+              <span className="rounded-full bg-[#d4af37]/30 px-1.5 py-0.2 font-mono text-[10px] text-[#fef08a] font-bold">
+                {readingList.length}
+              </span>
+            )}
+          </button>
+        </div>
+      </div>
+
+      {activeTab === 'reading_list' ? (
+        <ReadingListView
+          items={readingList}
+          onNavigateToBookmark={(item) => {
+            if (onNavigateToBookmark) onNavigateToBookmark(item);
+            if (window.innerWidth < 768) onClose();
+          }}
+          onRemoveFromReadingList={(msgId) => {
+            if (onRemoveFromReadingList) onRemoveFromReadingList(msgId);
+          }}
+        />
+      ) : activeTab === 'history' ? (
+        <ReadingHistoryView
+          history={readingHistory}
+          conversations={conversations}
+          activeId={activeId}
+          onSelectConversation={(id) => {
+            onSelectConversation(id);
+            if (window.innerWidth < 768) onClose();
+          }}
+          onRemoveFromHistory={(convId) => {
+            if (onRemoveFromReadingHistory) onRemoveFromReadingHistory(convId);
+          }}
+          onClearHistory={() => {
+            if (onClearReadingHistory) onClearReadingHistory();
+          }}
+          onSwitchToInquiries={() => handleTabChange('inquiries')}
+        />
+      ) : (
+        <>
+          {/* New Inquiry Action */}
+          <div className="p-3">
         <button
           onClick={() => {
             onNewChat();
@@ -348,18 +478,66 @@ export function Sidebar({
           )}
         </div>
       </div>
+    </>
+  )}
 
-      {/* Footer System Status */}
-      <div className="border-t border-white/10 bg-[#07080b] p-3 text-xs">
-        <div className="flex items-center gap-2 text-neutral-400">
-          <div className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-          <span className="font-mono text-[11px]">Berno Reasoning Engine</span>
+  {/* User Account Status in Sidebar */}
+  {user ? (
+    <div className="border-t border-white/10 bg-[#0c0f16] p-3">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[#d4af37] text-xs font-bold text-black font-mono shadow-sm shrink-0">
+            {user.name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()}
+          </div>
+          <div className="min-w-0">
+            <div className="text-xs font-medium text-white truncate max-w-[125px]">{user.name}</div>
+            <div className="text-[10px] font-mono text-[#d4af37]">{user.tier} Tier</div>
+          </div>
         </div>
-        <div className="mt-1 flex items-center justify-between text-[10px] font-mono text-neutral-500">
+        <button
+          onClick={onLogout}
+          className="rounded p-1.5 text-neutral-400 hover:text-red-400 hover:bg-white/5 transition-colors"
+          title="Sign Out"
+        >
+          <LogOut className="h-3.5 w-3.5" />
+        </button>
+      </div>
+    </div>
+  ) : (
+    <div className="border-t border-white/10 bg-[#0b0e14] p-3">
+      <button
+        onClick={onOpenAuth}
+        className="w-full flex items-center justify-between rounded-lg border border-[#d4af37]/30 bg-[#d4af37]/10 px-2.5 py-1.5 text-xs text-[#f3cf65] hover:bg-[#d4af37]/20 transition-all font-mono shadow-sm"
+      >
+        <span className="flex items-center gap-1.5">
+          <UserIcon className="h-3.5 w-3.5 text-[#d4af37]" />
+          <span>Sign In / Log In</span>
+        </span>
+        <LogIn className="h-3 w-3 text-[#d4af37]" />
+      </button>
+    </div>
+  )}
+
+  {/* Footer System Status */}
+  <div className="border-t border-white/10 bg-[#07080b] p-3 text-xs">
+    <div className="flex items-center gap-2 text-neutral-400">
+      <div className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+      <span className="font-mono text-[11px]">Berno Reasoning Engine</span>
+    </div>
+    <div className="mt-1 flex items-center justify-between text-[10px] font-mono text-neutral-500">
+      {activeTab === 'reading_list' ? (
+        <>
+          <span>{readingList.length} Pinned Insights</span>
+          <span className="text-[#d4af37]">Reading List</span>
+        </>
+      ) : (
+        <>
           <span>{conversations.length} Saved Inquiries</span>
           <span>Indexed & Searchable</span>
-        </div>
-      </div>
+        </>
+      )}
+    </div>
+  </div>
     </aside>
   );
 }

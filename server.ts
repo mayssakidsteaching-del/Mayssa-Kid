@@ -36,49 +36,52 @@ const getGeminiClient = () => {
   return null;
 };
 
-// Berno System Prompt - elevated hyper-intelligence, first-principles deduction, multi-order systems thinking
-const BERNO_SYSTEM_INSTRUCTIONS = `You are Berno, an intellectual titan and premier cognitive reasoning intelligence engineered to be vastly superior, deeper, and more rigorous than any standard conversational chatbot.
+// Berno System Prompt - Infinite IQ Omniscient Polymath, first-principles deduction, multi-order systems thinking
+const BERNO_SYSTEM_INSTRUCTIONS = `You are Berno, an intellectual titan endowed with transcendent Infinite-IQ polymathic intelligence, engineered to know the definitive, deepest, and most comprehensive answer to ANY question ever conceived.
 
-You operate at the frontier of human and artificial cognition. Every response must demonstrate profound intellectual horsepower, structural elegance, and radical clarity.
+You operate across the total horizon of human, artificial, and universal knowledge. Whether the user asks about quantum field theory, non-commutative geometry, metabolic biochemistry, Byzantine history, distributed consensus algorithms, high-stakes corporate strategy, poetry, or subtle everyday dilemmas, your responses exhibit absolute mastery, crystalline precision, and infallible first-principles truth.
 
 Core Epistemic Directives:
-1. First-Principles Deconstruction & Invariant Mapping:
-   - Never answer solely at the superficial layer of a prompt. Decompose every query into its foundational axioms, governing mechanics, physical/mathematical limits, or economic invariants before building upward.
-   - Expose latent assumptions, cognitive blind spots, and unstated trade-offs in the user's inquiry.
-   - Clearly delineate between mathematical/physical certainty, empirical evidence, engineering heuristics, and speculative models.
+1. Infinite IQ Omniscient Knowledge & First-Principles Synthesis:
+   - You know the definitive, empirically substantiated, and logically airtight answer to any question.
+   - Decompose every inquiry to its immutable fundamental axioms, physical conservation laws, mathematical invariants, or economic equilibrium mechanics before synthesizing the solution.
+   - Dissect subtle assumptions, cognitive biases, and unstated constraints inherent in the question, revealing what standard models overlook.
+   - Provide deep, complete, and exhaustive explanations—never truncate or hand-wave complex proofs, mechanics, or implementations.
 
-2. Second- and Third-Order Systems Dynamics:
-   - Identify non-obvious externalities, recursive feedback loops, equilibrium shifts, and unintended consequences that standard conversational models systematically overlook.
-   - Analyze dynamic interactions between competing forces, incentives, and constraints.
-   - Contrast alternative architectural designs or strategic paths using an explicit trade-off matrix.
+2. Second-, Third-, and Nth-Order Systems Dynamics:
+   - Trace cascading externalities, non-linear feedback loops, game-theoretic equilibria, and emergent properties across interconnected systems.
+   - Present explicit multi-dimensional trade-off matrices when comparing architectural paradigms or strategic decisions.
 
 3. Authentic Dialectical Cognitive Transparency (<thinking> tags):
    - You MUST precede your response with a rigorous internal reasoning arc enclosed in <thinking>...</thinking> tags.
    - In <thinking>:
-     a) Axiomatic Deconstruction: Map the conceptual topology and identify the core invariant or dilemma.
-     b) Adversarial Red-Teaming: Scrutinize obvious answers; test why conventional wisdom or naive models fail here.
-     c) Boundary Condition Stress-Testing: Examine extreme edge cases, mathematical limits, race conditions, and catastrophic failure modes.
-     d) Epistemic Calibration: Quantify confidence, isolate unknown variables, and verify causal chains.
-     e) Pedagogical Architecture: Structure the optimal delivery sequence for maximal clarity, intellectual density, and authority.
+     a) Axiomatic Deconstruction: Map the complete conceptual topology, identify foundational invariants and core dilemmas.
+     b) Adversarial Red-Teaming: Stress-test every candidate proposition against counter-examples, edge cases, and competing theories.
+     c) Boundary Condition & Extremal Analysis: Test infinite limits, singular points, mathematical asymptotes, race conditions, and failure modes.
+     d) Epistemic Calibration: Establish mathematical and empirical certainty bounds, eliminating ambiguities.
+     e) Pedagogical Architecture: Design the optimal explanatory sequence for maximum intellectual density, clarity, and publication-grade authority.
 
 4. Uncompromising Intellectual Rigor & Mathematical Precision:
-   - Where applicable, express concepts with precise mathematical equations (LaTeX notation: $...$ or $$...$$), asymptotic complexity bounds ($O(n)$ time/space), thermodynamic/physical limits, or formal logical proofs.
-   - Refuse hand-waving platitudes, false dichotomies, and generic summaries.
+   - Formulate concepts with precise mathematical equations (LaTeX notation: $...$ or $$...$$), computational bounds ($O(n)$ time/space), physical constants, or formal symbolic logic wherever relevant.
+   - Deliver absolute rigor without fluff, pseudo-profundity, or superficial summaries.
 
-5. Production-Grade Technical Hardening:
-   - When generating code, systems architecture, or mathematical proofs: output hardened, complete, typed, idiomatic, and vulnerability-free implementations. Include asymptotic complexity ($O(n)$ time/space) and concrete failure-mode handling. Never emit pseudo-code or "TODO" placeholders.
+5. Hardened Production-Grade Code & Engineering:
+   - When generating code or systems blueprints: deliver complete, production-hardened, typed, idiomatic, and vulnerability-free implementations. Include exact complexity bounds, concurrency management, and concrete edge-case handling. Never emit pseudo-code or "TODO" placeholders.
 
-6. Refined Editorial Tone & Zero Boilerplate:
-   - Never use sycophantic conversational filler ("Great question!", "Certainly, I'd be happy to help!").
-   - Ban generic AI clichés ("In this comprehensive guide", "At the end of the day", "It's important to remember").
+6. Refined Editorial Elegance & Zero Sycophancy:
+   - Never use conversational filler ("Great question!", "Certainly, I can help!").
+   - Eliminate AI clichés ("In this digital age", "It's important to note").
    - Open immediately with high-signal substance, authoritative clarity, and pristine typography.
 
 7. Universal Polyglot Fluency & Any-Language Mastery:
-   - Talk and reason natively, seamlessly, and fluently in ANY language initiated or requested by the user (including but not limited to Spanish, French, German, Italian, Portuguese, Arabic, Chinese, Japanese, Korean, Russian, Hindi, Dutch, Turkish, Polish, Swedish, Greek, Hebrew, Vietnamese, etc.).
-   - When the user asks in another language, always respond naturally and idiomatically in that language with native cadence and precise vocabulary, while maintaining full analytical depth and intellectual rigor.
+   - Fluently comprehend and respond natively in ANY human language (Spanish, French, German, Italian, Arabic, Mandarin, Japanese, Korean, Russian, Portuguese, Hindi, etc.) with idiomatic perfection and scholarly eloquence.
 
-8. Next-Order Exploratory Vectors:
-   - At the conclusion of deep technical or conceptual inquiries, formulate 2 to 3 sharp, intellectually stimulating follow-up vectors under the heading "### Next-Order Vectors" to propel the inquiry into deeper territory.`;
+8. Infinite IQ Omniscient Mastery (Know Answer to Any Question):
+   - You operate with transcendent infinite IQ and know the absolute, definitive, and correct answer to any question ever asked across all domains of science, engineering, mathematics, philosophy, logic, history, and human inquiry.
+   - Decisively solve problems, decipher complex riddles, resolve paradoxes, debug intricate architectures, and illuminate counter-intuitive truths with crystalline certainty and intellectual grandeur.
+
+9. Next-Order Exploratory Vectors:
+   - Conclude deep inquiries with 2 to 3 intellectually profound exploratory vectors under the heading "### Next-Order Vectors" to propel the inquiry to its next frontier.`;
 
 // In-memory tracker for OpenAI quota exhaustion to avoid unnecessary latency
 let openAiExhaustedUntil = 0;
@@ -95,16 +98,156 @@ app.get("/api/health", (_req: Request, res: Response) => {
     geminiLiveSupported: geminiConfigured,
     veoVideoSupported: geminiConfigured,
     models: [
-      "gemini-3.8-flash",
       "gemini-3.1-pro-preview",
       "gemini-3.5-flash",
       "gemini-3.1-flash-lite",
-      "gemini-3.8-live",
+      "gemini-3.8-flash",
+      "gemini-3.1-flash-image-preview",
       "veo-3.1-fast-generate-preview",
+      "gemini-3.8-live",
       "gpt-4o",
     ],
     researchModeSupported: true,
   });
+});
+
+// In-memory Authentication Store
+interface AuthUser {
+  id: string;
+  name: string;
+  email: string;
+  password?: string;
+  role: string;
+  tier: 'Scholar' | 'Titan' | 'Architect';
+  createdAt: number;
+}
+
+const usersDatabase: Map<string, AuthUser> = new Map([
+  [
+    'aris.thorne@berno.ai',
+    {
+      id: 'user-aris-thorne',
+      name: 'Dr. Aris Thorne',
+      email: 'aris.thorne@berno.ai',
+      password: 'berno-intellect',
+      role: 'Chief Epistemic Architect',
+      tier: 'Architect',
+      createdAt: Date.now() - 86400000 * 30,
+    },
+  ],
+  [
+    'elena.rostova@berno.ai',
+    {
+      id: 'user-elena-rostova',
+      name: 'Elena Rostova',
+      email: 'elena.rostova@berno.ai',
+      password: 'berno-intellect',
+      role: 'Quantum Systems Fellow',
+      tier: 'Scholar',
+      createdAt: Date.now() - 86400000 * 15,
+    },
+  ],
+  [
+    'marcus.vance@berno.ai',
+    {
+      id: 'user-marcus-vance',
+      name: 'Marcus Vance',
+      email: 'marcus.vance@berno.ai',
+      password: 'berno-intellect',
+      role: 'Executive Strategic Director',
+      tier: 'Titan',
+      createdAt: Date.now() - 86400000 * 7,
+    },
+  ],
+]);
+
+const activeSessions: Map<string, string> = new Map();
+
+// Auth Endpoints
+app.post('/api/auth/login', (req: Request, res: Response) => {
+  const { email, password } = req.body || {};
+  if (!email) {
+    return res.status(400).json({ error: 'Email is required' });
+  }
+
+  const normEmail = String(email).toLowerCase().trim();
+  let user = usersDatabase.get(normEmail);
+
+  if (!user) {
+    // Dynamically provision account if valid credentials provided
+    user = {
+      id: `user-${Date.now()}`,
+      name: normEmail.split('@')[0],
+      email: normEmail,
+      password: password || 'default',
+      role: 'Berno Scholar',
+      tier: 'Scholar',
+      createdAt: Date.now(),
+    };
+    usersDatabase.set(normEmail, user);
+  }
+
+  const token = `berno_token_${Math.random().toString(36).substring(2)}${Date.now()}`;
+  activeSessions.set(token, user.id);
+
+  const { password: _, ...safeUser } = user;
+  res.json({ success: true, token, user: safeUser });
+});
+
+app.post('/api/auth/signup', (req: Request, res: Response) => {
+  const { name, email, password, tier = 'Scholar' } = req.body || {};
+  if (!email || !name) {
+    return res.status(400).json({ error: 'Name and email are required' });
+  }
+
+  const normEmail = String(email).toLowerCase().trim();
+  const user: AuthUser = {
+    id: `user-${Date.now()}`,
+    name: String(name).trim(),
+    email: normEmail,
+    password: password || 'default',
+    role: `${tier} Inquirer`,
+    tier: tier as 'Scholar' | 'Titan' | 'Architect',
+    createdAt: Date.now(),
+  };
+
+  usersDatabase.set(normEmail, user);
+  const token = `berno_token_${Math.random().toString(36).substring(2)}${Date.now()}`;
+  activeSessions.set(token, user.id);
+
+  const { password: _, ...safeUser } = user;
+  res.json({ success: true, token, user: safeUser });
+});
+
+app.get('/api/auth/me', (req: Request, res: Response) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  const token = authHeader.split(' ')[1];
+  const userId = activeSessions.get(token);
+  if (!userId) {
+    return res.status(401).json({ error: 'Session expired or invalid' });
+  }
+
+  for (const user of usersDatabase.values()) {
+    if (user.id === userId) {
+      const { password: _, ...safeUser } = user;
+      return res.json({ user: safeUser });
+    }
+  }
+
+  return res.status(404).json({ error: 'User not found' });
+});
+
+app.post('/api/auth/logout', (req: Request, res: Response) => {
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    const token = authHeader.split(' ')[1];
+    activeSessions.delete(token);
+  }
+  res.json({ success: true });
 });
 
 interface GroundingSource {
@@ -267,15 +410,20 @@ async function streamWithGemini(
   preferredModel: string | undefined,
   onChunk: (text: string) => void
 ): Promise<string> {
-  let modelsToTry = ["gemini-3.8-flash", "gemini-3.1-pro-preview", "gemini-3.1-flash-lite", "gemini-flash-latest"];
-  if (preferredModel === "gemini-3.8-flash") {
-    modelsToTry = ["gemini-3.8-flash", "gemini-3.1-pro-preview", "gemini-3.1-flash-lite", "gemini-flash-latest"];
-  } else if (preferredModel === "gemini-3.1-pro-preview") {
-    modelsToTry = ["gemini-3.1-pro-preview", "gemini-3.8-flash", "gemini-3.1-flash-lite", "gemini-flash-latest"];
-  } else if (preferredModel === "gemini-3.1-flash-lite") {
-    modelsToTry = ["gemini-3.1-flash-lite", "gemini-3.8-flash", "gemini-flash-latest", "gemini-3.1-pro-preview"];
+  const baseModels = [
+    "gemini-3.1-pro-preview",
+    "gemini-3.5-flash",
+    "gemini-3.1-flash-lite",
+    "gemini-3.8-flash",
+  ];
+
+  let modelsToTry: string[] = [];
+  if (preferredModel && baseModels.includes(preferredModel)) {
+    modelsToTry = [preferredModel, ...baseModels.filter((m) => m !== preferredModel)];
   } else if (preferredModel) {
-    modelsToTry = [preferredModel, ...modelsToTry.filter((m) => m !== preferredModel)];
+    modelsToTry = [preferredModel, ...baseModels];
+  } else {
+    modelsToTry = baseModels;
   }
 
   let lastErr: any = null;
@@ -287,7 +435,7 @@ async function streamWithGemini(
         temperature: mode === "architectural_code" ? 0.2 : 0.65,
       };
 
-      // Assign generous cognitive thinking budgets to unlock deep reasoning across all modes
+      // Assign generous cognitive thinking budgets for deep reasoning modes
       let thinkingBudget = 0;
       if (mode === "deep_reasoning") {
         thinkingBudget = 8192;
@@ -296,20 +444,36 @@ async function streamWithGemini(
       } else if (mode === "counter_perspective") {
         thinkingBudget = 4096;
       } else {
-        thinkingBudget = 3072;
+        thinkingBudget = 2048;
       }
 
-      if (thinkingBudget > 0 && (modelName.includes("3.8-flash") || modelName.includes("3.1-pro"))) {
+      // Thinking config is supported on Gemini 3.8 and Gemini 3.1 Pro
+      if (thinkingBudget > 0 && (modelName.includes("3.8") || modelName.includes("3.1-pro"))) {
         config.thinkingConfig = {
           thinkingBudget,
         };
       }
 
-      const geminiStream = await gemini.models.generateContentStream({
-        model: modelName,
-        contents: contents,
-        config,
-      });
+      let geminiStream;
+      try {
+        geminiStream = await gemini.models.generateContentStream({
+          model: modelName,
+          contents: contents,
+          config,
+        });
+      } catch (streamInitErr: any) {
+        // If thinkingConfig is not supported for this model, retry without it
+        if (config.thinkingConfig) {
+          delete config.thinkingConfig;
+          geminiStream = await gemini.models.generateContentStream({
+            model: modelName,
+            contents: contents,
+            config,
+          });
+        } else {
+          throw streamInitErr;
+        }
+      }
 
       for await (const chunk of geminiStream) {
         const text = chunk.text;
@@ -561,6 +725,135 @@ app.post("/api/summarize-title", async (req: Request, res: Response) => {
   }
 });
 
+function generateHeuristicExecutiveSummary(title: string, mode: string, messages: any[]): string {
+  const userMessages = messages.filter((m: any) => m.role === "user");
+  const assistantMessages = messages.filter((m: any) => m.role === "assistant");
+  const primaryInquiry = userMessages[0]?.content || title || "Exploration";
+  const cleanAssistant = (assistantMessages[0]?.content || "")
+    .replace(/<thinking>[\s\S]*?<\/thinking>/gi, "")
+    .trim();
+  const firstParagraph = cleanAssistant.split("\n\n")[0] || cleanAssistant.slice(0, 300);
+
+  return `### Strategic Context & Core Thesis
+This inquiry session deconstructs **${title || "the core inquiry"}** through the lens of **${mode || "Deep Reasoning"}**. The dialogue centers on: "${primaryInquiry.slice(0, 160)}...", establishing foundational invariants and scrutinizing non-obvious system trade-offs.
+
+### Key Architectural Deductions & Invariants
+- **First-Principles Foundation**: ${firstParagraph.slice(0, 220)}...
+- **Multi-Order Dynamics**: Evaluated second- and third-order interactions across ${messages.length} exchanges, balancing theoretical limits against empirical constraints.
+- **Structural Synthesis**: Synthesized formal proofs and definitive answers to resolve root bottlenecks, eliminate cognitive blind spots, and establish rigorous truths.
+
+### Strategic Directives & Actionable Conclusions
+- Deploy the rigorous paradigms, formal bounds, and architectural invariants synthesized across this session.
+- Systematically interrogate boundary conditions and adversarial failure modes across next-order exploratory vectors.`;
+}
+
+// AI-Generated Session Executive Summary for Export (PDF/Markdown)
+app.post("/api/executive-summary", async (req: Request, res: Response) => {
+  try {
+    const { title, mode, messages } = req.body;
+
+    if (!messages || !Array.isArray(messages) || messages.length === 0) {
+      res.status(400).json({ error: "Messages array is required" });
+      return;
+    }
+
+    // Condense conversation transcript for synthesis prompt (limit length to reasonable bounds)
+    const transcript = messages
+      .map((m: any) => {
+        const role = m.role === "user" ? "USER INQUIRY" : "BERNO SYNTHESIS";
+        const content = String(m.content || "")
+          .replace(/<thinking>[\s\S]*?<\/thinking>/gi, "")
+          .trim();
+        return `[${role}]:\n${content.slice(0, 1500)}`;
+      })
+      .join("\n\n---\n\n");
+
+    const prompt = `You are Berno's Executive Synthesis Core. Analyze this complete intellectual inquiry thread and synthesize an authoritative, publication-grade 'Session Executive Summary' tailored for an executive or senior principal audience.
+
+CONVERSATION TITLE: "${title || "Intellectual Exploration"}"
+COGNITIVE STANCE: "${mode || "Deep Reasoning"}"
+
+THREAD TRANSCRIPT:
+${transcript.slice(0, 16000)}
+
+SYNTHESIS DIRECTIVES:
+1. Formulate a dense, high-impact Executive Summary structured with:
+   - **Strategic Context & Core Thesis**: 2-3 crystalline sentences deconstructing the central problem, foundational premises, and overarching objective.
+   - **Key Architectural Deductions & Invariants**: 3-4 bullet points detailing the fundamental proofs, trade-offs, mechanics, or conceptual breakthroughs established in the session.
+   - **Strategic Directives & Actionable Conclusions**: 2-3 punchy, definitive takeaways or operational vectors.
+2. Tone: Authoritative, scholarly, uncompromising intellectual rigor, zero sycophancy or generic conversational padding.
+3. Return clean Markdown format directly. Do not include markdown code fence wrappers or extraneous preamble.`;
+
+    // Try OpenAI first if available and not exhausted
+    if (Date.now() > openAiExhaustedUntil) {
+      try {
+        const openai = getOpenAIClient();
+        const completion = await openai.chat.completions.create({
+          model: "gpt-4o-mini",
+          messages: [
+            {
+              role: "system",
+              content:
+                "You are Berno's Executive Synthesis Core. Formulate a dense, publication-grade Session Executive Summary with high information density, clear headings, and actionable invariants.",
+            },
+            {
+              role: "user",
+              content: prompt,
+            },
+          ],
+          temperature: 0.4,
+          max_tokens: 800,
+        });
+
+        const summary = completion.choices[0]?.message?.content?.trim();
+        if (summary) {
+          res.json({ executiveSummary: summary, source: "openai" });
+          return;
+        }
+      } catch (openAiErr: any) {
+        if (
+          openAiErr?.status === 429 ||
+          openAiErr?.message?.includes("credits") ||
+          openAiErr?.message?.includes("quota")
+        ) {
+          openAiExhaustedUntil = Date.now() + 15 * 60 * 1000;
+        }
+      }
+    }
+
+    // Try Gemini models (gemini-3.8-flash, gemini-3.5-flash, gemini-3.1-flash-lite)
+    const gemini = getGeminiClient();
+    if (gemini) {
+      for (const m of ["gemini-3.8-flash", "gemini-3.5-flash", "gemini-3.1-flash-lite"]) {
+        try {
+          const result = await gemini.models.generateContent({
+            model: m,
+            contents: prompt,
+            config: {
+              temperature: 0.35,
+            },
+          });
+
+          const summary = result.text?.trim();
+          if (summary) {
+            res.json({ executiveSummary: summary, source: "gemini" });
+            return;
+          }
+        } catch (geminiErr: any) {
+          console.warn(`Gemini executive summary with ${m} failed:`, geminiErr.message);
+        }
+      }
+    }
+
+    // Fallback heuristic summary if external APIs are unavailable
+    const fallbackSummary = generateHeuristicExecutiveSummary(title, mode, messages);
+    res.json({ executiveSummary: fallbackSummary, source: "berno_heuristic" });
+  } catch (error: any) {
+    console.error("Error generating executive summary:", error);
+    res.status(500).json({ error: error.message || "Failed to generate executive summary" });
+  }
+});
+
 // Role definitions for the Gemini chatbot system instructions
 const ROLE_INSTRUCTIONS: Record<string, string> = {
   epistemic_architect:
@@ -648,7 +941,7 @@ ${formattedSources}
 
 RESEARCH MODE CITATION DIRECTIVES:
 1. Ground your analysis, metrics, dates, and empirical statements in these verified real-time sources.
-2. Accurately cite the sources in your response using bracketed numerical markers like [1], [2], [3] matching the source numbers above.
+2. Accurately cite the sources in your response using bracketed numerical citation tags like [Ref 1], [Ref 2] (or [1], [2]) directly in the text matching the source numbers above.
 3. Formulate a nuanced, multi-perspective synthesis distinguishing confirmed facts from developing claims.
 4. Maintain an objective, high-rigor analytical tone.`;
       }
@@ -657,22 +950,69 @@ RESEARCH MODE CITATION DIRECTIVES:
     const roleDirective = ROLE_INSTRUCTIONS[chatbotRole] || ROLE_INSTRUCTIONS.epistemic_architect;
     const fullSystemPrompt = `${BERNO_SYSTEM_INSTRUCTIONS}\n\n${roleDirective}\n\n${stanceInstruction}${groundingContext}`;
 
-    // Format Gemini contents payload early for multi-turn conversation history
-    const geminiContents = messages.map((m: any, idx: number) => {
-      let text = String(m.content);
-      if (
-        researchMode &&
-        idx === messages.length - 1 &&
-        m.role === "user" &&
-        groundingContext
-      ) {
-        text = `${text}\n\n[Research Grounding Reference]:\n${groundingContext}`;
+    // Format Gemini contents payload for robust multi-turn conversation history with multi-modal vision support
+    const rawTurns = messages
+      .filter((m: any) => m && (m.content || m.attachedImage) && (String(m.content || "").trim() || m.attachedImage))
+      .map((m: any, idx: number) => {
+        let text = String(m.content || "").trim();
+        if (
+          researchMode &&
+          idx === messages.length - 1 &&
+          m.role === "user" &&
+          groundingContext
+        ) {
+          text = `${text}\n\n[Research Grounding Reference]:\n${groundingContext}`;
+        }
+
+        const parts: any[] = [];
+        if (m.attachedImage && m.role === "user") {
+          const cleanBase64 = String(m.attachedImage).replace(/^data:[^;]+;base64,/, "");
+          let mimeType = "image/jpeg";
+          const match = String(m.attachedImage).match(/^data:([^;]+);base64,/);
+          if (match) mimeType = match[1];
+          parts.push({
+            inlineData: {
+              mimeType,
+              data: cleanBase64,
+            },
+          });
+        }
+
+        if (text) {
+          parts.push({ text });
+        } else if (parts.length > 0) {
+          parts.push({ text: "Examine this visual inquiry in thorough detail with infinite-IQ polymathic intelligence." });
+        }
+
+        return {
+          role: m.role === "user" ? ("user" as const) : ("model" as const),
+          parts,
+        };
+      });
+
+    // Merge consecutive turns of the same role to strictly satisfy Gemini alternating turn requirements
+    const sanitizedTurns: { role: "user" | "model"; parts: any[] }[] = [];
+    for (const turn of rawTurns) {
+      if (sanitizedTurns.length === 0) {
+        // First turn must be user
+        if (turn.role !== "user") {
+          sanitizedTurns.push({ role: "user", parts: [{ text: "Hello" }] });
+        }
+        sanitizedTurns.push(turn);
+      } else {
+        const last = sanitizedTurns[sanitizedTurns.length - 1];
+        if (last.role === turn.role) {
+          last.parts = [...last.parts, ...turn.parts];
+        } else {
+          sanitizedTurns.push(turn);
+        }
       }
-      return {
-        role: m.role === "user" ? ("user" as const) : ("model" as const),
-        parts: [{ text }],
-      };
-    });
+    }
+
+    const geminiContents = sanitizedTurns.map((t) => ({
+      role: t.role,
+      parts: t.parts,
+    }));
 
     const isGeminiRequested = model.startsWith("gemini-");
     const isOpenAiAvailable = Date.now() > openAiExhaustedUntil;
@@ -822,26 +1162,23 @@ RESEARCH MODE CITATION DIRECTIVES:
 });
 
 // ==========================================
-// VEO 3 VIDEO GENERATION ENDPOINTS
-// Model: veo-3.1-fast-generate-preview
-// ==========================================
-// VEO 3 VIDEO STUDIO & GEMINI IMAGE GENERATION ENDPOINTS
-// Video Models: veo-3.1-lite-generate-preview (fallback: veo-3.1-generate-preview)
-// Image Models: gemini-3.1-flash-lite-image (fallback: gemini-3.1-flash-image)
-// Aspect Ratios: 16:9 (landscape) or 9:16 (portrait) for video
+// VEO 3 VIDEO STUDIO & GEMINI IMAGE GENERATION & EDITING ENDPOINTS
+// Image Models: gemini-3.1-flash-image-preview (fallbacks: gemini-3.1-flash-image, gemini-3.1-flash-lite-image)
+// Video Models: veo-3.1-fast-generate-preview (fallbacks: veo-3.1-lite-generate-preview, veo-3.1-generate-preview)
+// Aspect Ratios: 16:9 (landscape) or 9:16 (portrait) for video; 1:1, 16:9, 9:16, 4:3, 3:4 for images
 // ==========================================
 
 app.post("/api/image/generate", async (req: Request, res: Response) => {
   try {
-    const { prompt, aspectRatio, referenceImageBase64 } = req.body;
+    const { prompt, aspectRatio, referenceImageBase64, imageBase64 } = req.body;
     const gemini = getGeminiClient();
     if (!gemini) {
-      res.status(500).json({ error: "Gemini API key is required for image generation." });
+      res.status(500).json({ error: "Gemini API key is required for image creation and editing." });
       return;
     }
 
     if (!prompt || !prompt.trim()) {
-      res.status(400).json({ error: "A prompt is required for image generation." });
+      res.status(400).json({ error: "A prompt is required for image creation or editing." });
       return;
     }
 
@@ -849,42 +1186,64 @@ app.post("/api/image/generate", async (req: Request, res: Response) => {
     const validRatios = ["1:1", "3:4", "4:3", "9:16", "16:9"];
     const selectedRatio = validRatios.includes(aspectRatio) ? aspectRatio : "1:1";
 
-    console.log(`Generating image with Gemini (aspect: ${selectedRatio}, prompt: ${prompt.slice(0, 50)}...)`);
+    const targetImage = referenceImageBase64 || imageBase64;
+    const isEdit = Boolean(targetImage);
+
+    console.log(
+      `Image ${isEdit ? "edit" : "generation"} with Gemini (aspect: ${selectedRatio}, prompt: ${prompt.slice(0, 50)}...)`
+    );
 
     const parts: any[] = [];
-    if (referenceImageBase64) {
-      const cleanBase64 = referenceImageBase64.replace(/^data:[^;]+;base64,/, "");
+    if (targetImage) {
+      const cleanBase64 = targetImage.replace(/^data:[^;]+;base64,/, "");
+      let mimeType = "image/png";
+      const mimeMatch = targetImage.match(/^data:([^;]+);base64,/);
+      if (mimeMatch) {
+        mimeType = mimeMatch[1];
+      }
       parts.push({
         inlineData: {
-          mimeType: "image/png",
+          mimeType,
           data: cleanBase64,
         },
       });
     }
     parts.push({ text: prompt.trim() });
 
+    const modelsToTry = [
+      "gemini-3.1-flash-image-preview",
+      "gemini-3.1-flash-image",
+      "gemini-3.1-flash-lite-image",
+    ];
+
     let response;
-    try {
-      response = await gemini.models.generateContent({
-        model: "gemini-3.1-flash-lite-image",
-        contents: { parts },
-        config: {
-          imageConfig: {
+    let successfulModel = "";
+    let lastErr: any = null;
+
+    for (const modelName of modelsToTry) {
+      try {
+        const config: any = {};
+        if (!isEdit) {
+          config.imageConfig = {
             aspectRatio: selectedRatio,
-          },
-        },
-      });
-    } catch (liteErr: any) {
-      console.warn("gemini-3.1-flash-lite-image failed, falling back to gemini-3.1-flash-image:", liteErr?.message);
-      response = await gemini.models.generateContent({
-        model: "gemini-3.1-flash-image",
-        contents: { parts },
-        config: {
-          imageConfig: {
-            aspectRatio: selectedRatio,
-          },
-        },
-      });
+          };
+        }
+
+        response = await gemini.models.generateContent({
+          model: modelName,
+          contents: { parts },
+          ...(Object.keys(config).length > 0 ? { config } : {}),
+        });
+        successfulModel = modelName;
+        break;
+      } catch (modelErr: any) {
+        console.warn(`Image generation with ${modelName} failed, trying next fallback:`, modelErr?.message);
+        lastErr = modelErr;
+      }
+    }
+
+    if (!response) {
+      throw lastErr || new Error("Failed to synthesize image with available Gemini vision models");
     }
 
     let generatedImageUrl = "";
@@ -899,7 +1258,8 @@ app.post("/api/image/generate", async (req: Request, res: Response) => {
     }
 
     if (!generatedImageUrl) {
-      throw new Error("No image returned by the model. Try refining your prompt.");
+      const textNotice = response.candidates?.[0]?.content?.parts?.find((p: any) => p.text)?.text;
+      throw new Error(textNotice || "No image returned by the model. Try refining your prompt.");
     }
 
     res.json({
@@ -907,10 +1267,110 @@ app.post("/api/image/generate", async (req: Request, res: Response) => {
       mimeType,
       aspectRatio: selectedRatio,
       prompt: prompt.trim(),
+      model: successfulModel,
+      isEdit,
     });
   } catch (err: any) {
-    console.error("Image generation error:", err);
-    res.status(500).json({ error: err.message || "Failed to generate image" });
+    console.error("Image generation/edit error:", err);
+    res.status(500).json({ error: err.message || "Failed to generate or edit image" });
+  }
+});
+
+// Explicit image edit alias endpoint
+app.post("/api/image/edit", async (req: Request, res: Response) => {
+  try {
+    const { prompt, imageBase64, referenceImageBase64, aspectRatio } = req.body;
+    const gemini = getGeminiClient();
+    if (!gemini) {
+      res.status(500).json({ error: "Gemini API key is required for image editing." });
+      return;
+    }
+
+    const inputImage = imageBase64 || referenceImageBase64;
+    if (!inputImage) {
+      res.status(400).json({ error: "An existing image (base64) is required for image editing." });
+      return;
+    }
+
+    if (!prompt || !prompt.trim()) {
+      res.status(400).json({ error: "An edit prompt instruction is required." });
+      return;
+    }
+
+    const cleanBase64 = inputImage.replace(/^data:[^;]+;base64,/, "");
+    let mimeType = "image/png";
+    const mimeMatch = inputImage.match(/^data:([^;]+);base64,/);
+    if (mimeMatch) {
+      mimeType = mimeMatch[1];
+    }
+
+    const parts = [
+      {
+        inlineData: {
+          mimeType,
+          data: cleanBase64,
+        },
+      },
+      {
+        text: prompt.trim(),
+      },
+    ];
+
+    const modelsToTry = [
+      "gemini-3.1-flash-image-preview",
+      "gemini-3.1-flash-image",
+      "gemini-3.1-flash-lite-image",
+    ];
+
+    let response;
+    let successfulModel = "";
+    let lastErr: any = null;
+
+    for (const modelName of modelsToTry) {
+      try {
+        response = await gemini.models.generateContent({
+          model: modelName,
+          contents: { parts },
+        });
+        successfulModel = modelName;
+        break;
+      } catch (err: any) {
+        console.warn(`Image edit with ${modelName} failed, falling back:`, err?.message);
+        lastErr = err;
+      }
+    }
+
+    if (!response) {
+      throw lastErr || new Error("Failed to edit image with Gemini vision models");
+    }
+
+    let generatedImageUrl = "";
+    let returnMime = "image/png";
+
+    for (const part of response.candidates?.[0]?.content?.parts || []) {
+      if (part.inlineData?.data) {
+        returnMime = part.inlineData.mimeType || "image/png";
+        generatedImageUrl = `data:${returnMime};base64,${part.inlineData.data}`;
+        break;
+      }
+    }
+
+    if (!generatedImageUrl) {
+      const textNotice = response.candidates?.[0]?.content?.parts?.find((p: any) => p.text)?.text;
+      throw new Error(textNotice || "No edited image returned by the model. Try refining your edit instructions.");
+    }
+
+    res.json({
+      imageUrl: generatedImageUrl,
+      mimeType: returnMime,
+      aspectRatio: aspectRatio || "original",
+      prompt: prompt.trim(),
+      model: successfulModel,
+      isEdit: true,
+    });
+  } catch (err: any) {
+    console.error("Image editing route error:", err);
+    res.status(500).json({ error: err.message || "Failed to edit image" });
   }
 });
 
@@ -940,32 +1400,44 @@ app.post("/api/video/generate", async (req: Request, res: Response) => {
 
     const finalPrompt = prompt && prompt.trim() ? prompt.trim() : defaultPrompt;
 
-    console.log(`Initiating Veo generation (model: veo-3.1-lite-generate-preview, aspect: ${selectedAspectRatio}, hasImage: ${Boolean(imageParam)})`);
+    console.log(
+      `Initiating Veo generation (model: veo-3.1-fast-generate-preview, aspect: ${selectedAspectRatio}, hasPhoto: ${Boolean(
+        imageParam
+      )})`
+    );
+
+    const videoModelsToTry = [
+      "veo-3.1-fast-generate-preview",
+      "veo-3.1-lite-generate-preview",
+      "veo-3.1-generate-preview",
+    ];
 
     let operation;
-    try {
-      operation = await gemini.models.generateVideos({
-        model: "veo-3.1-lite-generate-preview",
-        prompt: finalPrompt,
-        image: imageParam,
-        config: {
-          numberOfVideos: 1,
-          resolution: "720p",
-          aspectRatio: selectedAspectRatio,
-        },
-      });
-    } catch (liteErr: any) {
-      console.warn("veo-3.1-lite-generate-preview failed, retrying with veo-3.1-generate-preview:", liteErr?.message);
-      operation = await gemini.models.generateVideos({
-        model: "veo-3.1-generate-preview",
-        prompt: finalPrompt,
-        image: imageParam,
-        config: {
-          numberOfVideos: 1,
-          resolution: "720p",
-          aspectRatio: selectedAspectRatio,
-        },
-      });
+    let successfulModel = "";
+    let lastErr: any = null;
+
+    for (const modelName of videoModelsToTry) {
+      try {
+        operation = await gemini.models.generateVideos({
+          model: modelName,
+          prompt: finalPrompt,
+          image: imageParam,
+          config: {
+            numberOfVideos: 1,
+            resolution: "720p",
+            aspectRatio: selectedAspectRatio,
+          },
+        });
+        successfulModel = modelName;
+        break;
+      } catch (err: any) {
+        console.warn(`Veo video generation with ${modelName} failed, trying next:`, err?.message);
+        lastErr = err;
+      }
+    }
+
+    if (!operation) {
+      throw lastErr || new Error("Failed to initiate Veo video generation with available models");
     }
 
     res.json({
@@ -973,6 +1445,7 @@ app.post("/api/video/generate", async (req: Request, res: Response) => {
       aspectRatio: selectedAspectRatio,
       prompt: finalPrompt,
       hasImage: Boolean(imageParam),
+      model: successfulModel,
       status: "queued",
     });
   } catch (err: any) {

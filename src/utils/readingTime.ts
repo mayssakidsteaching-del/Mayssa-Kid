@@ -1,7 +1,7 @@
 /**
  * Reading time calculation utility
- * Based on empirical human reading speed:
- * - Average adult silent reading speed: 200–230 words per minute (WPM)
+ * Based on editorial reading standards:
+ * - Average reading speed: 250 words per minute (WPM)
  * - Technical code comprehension: ~80–100 words/tokens per minute
  * - CJK (Chinese, Japanese, Korean) reading speed: ~350–400 characters per minute
  */
@@ -16,7 +16,26 @@ export interface ReadingTimeResult {
   tooltip: string;
 }
 
-export function calculateReadingTime(text: string, averageWpm: number = 210): ReadingTimeResult {
+export function calculateWordCount(text: string): number {
+  if (!text || !text.trim()) return 0;
+  const cleanText = text.replace(/<thinking>[\s\S]*?<\/thinking>/gi, '').trim();
+  if (!cleanText) return 0;
+
+  const cjkMatches = cleanText.match(/[\u4e00-\u9fa5\u3040-\u30ff\uac00-\ud7af]/g);
+  const cjkCount = cjkMatches ? cjkMatches.length : 0;
+
+  const normalized = cleanText
+    .replace(/```[a-zA-Z0-9_-]*\n?/g, ' ')
+    .replace(/```/g, ' ')
+    .replace(/[#*`_~>[\]()!+=|\\-]/g, ' ')
+    .replace(/[\u4e00-\u9fa5\u3040-\u30ff\uac00-\ud7af]/g, ' ')
+    .trim();
+
+  const words = normalized ? normalized.split(/\s+/).filter(Boolean) : [];
+  return words.length + cjkCount;
+}
+
+export function calculateReadingTime(text: string, averageWpm: number = 250): ReadingTimeResult {
   if (!text || !text.trim()) {
     return {
       minutes: 0,
@@ -89,5 +108,76 @@ export function calculateReadingTime(text: string, averageWpm: number = 210): Re
     codeLines,
     display,
     tooltip: tooltipParts.join(' • '),
+  };
+}
+
+export interface MessageReadingStats {
+  id: string;
+  role: 'user' | 'assistant';
+  wordCount: number;
+  readingSeconds: number;
+}
+
+export interface ConversationReadingStats {
+  totalWords: number;
+  totalSeconds: number;
+  assistantWords: number;
+  assistantSeconds: number;
+  formattedTotal: string;
+  messageStats: MessageReadingStats[];
+}
+
+/**
+ * Calculates aggregate reading metrics across all messages in a conversation
+ * based on the 250 WPM benchmark.
+ */
+export function calculateConversationStats(
+  messages: Array<{ id: string; role: string; content?: string; rawContent?: string }>,
+  averageWpm: number = 250
+): ConversationReadingStats {
+  let totalWords = 0;
+  let totalSeconds = 0;
+  let assistantWords = 0;
+  let assistantSeconds = 0;
+
+  const messageStats: MessageReadingStats[] = messages.map((m) => {
+    const text = m.content || m.rawContent || '';
+    const words = calculateWordCount(text);
+    const reading = calculateReadingTime(text, averageWpm);
+    const seconds = reading.seconds || Math.max(2, Math.round((words / averageWpm) * 60));
+
+    totalWords += words;
+    totalSeconds += seconds;
+
+    if (m.role === 'assistant') {
+      assistantWords += words;
+      assistantSeconds += seconds;
+    }
+
+    return {
+      id: m.id,
+      role: m.role as 'user' | 'assistant',
+      wordCount: words,
+      readingSeconds: seconds,
+    };
+  });
+
+  const roundedMinutes = Math.max(1, Math.round(totalSeconds / 60));
+  let formattedTotal = '';
+  if (totalSeconds < 45) {
+    formattedTotal = '< 1 min read';
+  } else if (totalSeconds <= 75) {
+    formattedTotal = '1 min read';
+  } else {
+    formattedTotal = `${roundedMinutes} min read`;
+  }
+
+  return {
+    totalWords,
+    totalSeconds,
+    assistantWords,
+    assistantSeconds,
+    formattedTotal,
+    messageStats,
   };
 }

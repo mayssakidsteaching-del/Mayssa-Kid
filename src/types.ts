@@ -32,6 +32,7 @@ export interface GroundingSource {
   url: string;
   snippet?: string;
   hostname?: string;
+  citedInTurns?: number[];
 }
 
 export interface Message {
@@ -51,6 +52,7 @@ export interface Message {
   researchMode?: boolean;
   groundingSources?: GroundingSource[];
   searchQueries?: string[];
+  attachedImage?: string;
 }
 
 export interface Conversation {
@@ -65,13 +67,17 @@ export interface Conversation {
   chatbotRole?: ChatbotRole;
   titleSummarized?: boolean;
   tags?: string[];
+  executiveSummary?: string;
 }
 
 export interface ImageGenerationItem {
   id: string;
   prompt: string;
   imageUrl: string;
+  sourceImageUrl?: string;
+  isEdit?: boolean;
   aspectRatio: string;
+  model?: string;
   createdAt: number;
 }
 
@@ -95,4 +101,37 @@ export interface VoiceMessage {
   text: string;
   timestamp: number;
 }
+
+export interface ReadingListItem {
+  id: string;
+  messageId: string;
+  conversationId: string;
+  conversationTitle: string;
+  role: 'user' | 'assistant';
+  snippet: string;
+  fullContent: string;
+  timestamp: number;
+  bookmarkedAt: number;
+  wordCount: number;
+  readingTimeDisplay: string;
+  mode?: ThinkingMode;
+  chatbotRole?: ChatbotRole;
+}
+
+export interface ReadingHistoryItem {
+  id: string;
+  conversationId: string;
+  viewedAt: number;
+}
+
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  avatar?: string;
+  role?: string;
+  tier?: 'Scholar' | 'Titan' | 'Architect';
+  createdAt: number;
+}
+
 
