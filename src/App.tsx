@@ -8,6 +8,8 @@ import {
   ReadingHistoryItem,
   GroundingSource,
   User,
+  FontWeightVariant,
+  WebsitePluginTheme,
 } from './types';
 import { Header } from './components/Header';
 import { Sidebar } from './components/Sidebar';
@@ -16,6 +18,7 @@ import { ChatInput } from './components/ChatInput';
 import { EmptyState } from './components/EmptyState';
 import { AboutModal } from './components/AboutModal';
 import { AuthModal } from './components/AuthModal';
+import { PluginsModal } from './components/PluginsModal';
 import { ConversationProgressBar } from './components/ConversationProgressBar';
 import { VoiceConversationModal } from './components/VoiceConversationModal';
 import { VeoVideoStudioModal, StudioTab } from './components/VeoVideoStudioModal';
@@ -23,6 +26,16 @@ import { ReaderDashboardModal } from './components/ReaderDashboardModal';
 import { CreativeStudioPickerModal } from './components/CreativeStudioPickerModal';
 import { SoftKeyboardOverlay } from './components/SoftKeyboardOverlay';
 import { TableOfContents } from './components/TableOfContents';
+import {
+  subscribeToAuthState,
+  saveConversationToCloud,
+  loadConversationsFromCloud,
+  deleteConversationFromCloud,
+  saveUserSettingsToCloud,
+  loadUserSettingsFromCloud,
+  logOut,
+  testConnection,
+} from './lib/firebase';
 import {
   loadConversations,
   saveConversations,
@@ -45,6 +58,8 @@ import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { useReadAloud } from './hooks/useReadAloud';
 import { parseRawMessage } from './utils/parser';
 import { generateThreeWordSummary } from './utils/titleSummarizer';
+import { OfflineIndicator } from './components/OfflineIndicator';
+import { streamOfflineResponse } from './utils/offlineAI';
 
 export default function App() {
   const [conversations, setConversations] = useState<Conversation[]>(() =>
@@ -122,6 +137,28 @@ export default function App() {
       return 18;
     }
   });
+
+  // Editorial Serif Font Weight Variant ('light' | 'normal' | 'bold')
+  const [fontWeight, setFontWeight] = useState<FontWeightVariant>(() => {
+    try {
+      const saved = localStorage.getItem('berno_readability_font_weight');
+      return (saved as FontWeightVariant) || 'normal';
+    } catch {
+      return 'normal';
+    }
+  });
+
+  // Website Style Plugins state
+  const [activePlugin, setActivePlugin] = useState<WebsitePluginTheme | null>(() => {
+    try {
+      const saved = localStorage.getItem('berno_active_plugin');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [isPluginsModalOpen, setIsPluginsModalOpen] = useState(false);
+
   const [isSoftKeyboardOpen, setIsSoftKeyboardOpen] = useState(false);
   const [isTableOfContentsOpen, setIsTableOfContentsOpen] = useState(false);
   const [isFocusZen, setIsFocusZen] = useState(false);
@@ -136,10 +173,67 @@ export default function App() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-  // Sync state to local storage
+  // Check Firebase connection on initial boot
+  useEffect(() => {
+    testConnection();
+  }, []);
+
+  // Subscribe to real Firebase Auth state changes
+  useEffect(() => {
+    const unsubscribe = subscribeToAuthState(async (authenticatedUser) => {
+      if (authenticatedUser) {
+        setUser(authenticatedUser);
+        try {
+          localStorage.setItem('berno_auth_user', JSON.stringify(authenticatedUser));
+        } catch {}
+
+        // Hydrate cloud conversations
+        try {
+          const cloudConvs = await loadConversationsFromCloud(authenticatedUser.id);
+          if (cloudConvs && cloudConvs.length > 0) {
+            setConversations((localConvs) => {
+              const localMap = new Map(localConvs.map((c) => [c.id, c]));
+              for (const c of cloudConvs) {
+                const existing = localMap.get(c.id);
+                if (!existing || (c.updatedAt && c.updatedAt > (existing.updatedAt || 0))) {
+                  localMap.set(c.id, c);
+                }
+              }
+              return Array.from(localMap.values());
+            });
+          }
+        } catch (e) {
+          console.warn('Could not sync cloud conversations:', e);
+        }
+
+        // Hydrate cloud settings
+        try {
+          const cloudSettings = await loadUserSettingsFromCloud(authenticatedUser.id);
+          if (cloudSettings) {
+            if (cloudSettings.fontSize) setFontSize(cloudSettings.fontSize);
+            if (cloudSettings.fontWeight) setFontWeight(cloudSettings.fontWeight);
+            if (cloudSettings.dailyGoalMinutes) setDailyGoalMinutes(cloudSettings.dailyGoalMinutes);
+            if (cloudSettings.activePlugin !== undefined) setActivePlugin(cloudSettings.activePlugin);
+          }
+        } catch (e) {
+          console.warn('Could not sync cloud settings:', e);
+        }
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  // Sync state to local storage and Firebase Cloud if authenticated
   useEffect(() => {
     saveConversations(conversations);
-  }, [conversations]);
+    if (user && activeId) {
+      const activeConv = conversations.find((c) => c.id === activeId);
+      if (activeConv) {
+        saveConversationToCloud(user.id, activeConv);
+      }
+    }
+  }, [conversations, user, activeId]);
 
   useEffect(() => {
     saveReadingList(readingList);
@@ -152,6 +246,30 @@ export default function App() {
   useEffect(() => {
     saveSelectedMode(selectedMode);
   }, [selectedMode]);
+
+  // Sync font weight preference
+  useEffect(() => {
+    try {
+      localStorage.setItem('berno_readability_font_weight', fontWeight);
+    } catch {}
+    if (user) {
+      saveUserSettingsToCloud(user.id, { fontWeight });
+    }
+  }, [fontWeight, user]);
+
+  // Sync website style plugin preference
+  useEffect(() => {
+    try {
+      if (activePlugin) {
+        localStorage.setItem('berno_active_plugin', JSON.stringify(activePlugin));
+      } else {
+        localStorage.removeItem('berno_active_plugin');
+      }
+    } catch {}
+    if (user) {
+      saveUserSettingsToCloud(user.id, { activePlugin });
+    }
+  }, [activePlugin, user]);
 
   // Focus Session active engagement listener: auto-pauses when scrolling away, idle (>10s), or tab blurred
   useEffect(() => {
@@ -456,6 +574,78 @@ export default function App() {
     setIsStreaming(true);
     abortControllerRef.current = new AbortController();
 
+    const runOfflineEngine = async () => {
+      let accumulatedRaw = '';
+      try {
+        const stream = streamOfflineResponse(
+          text,
+          updatedMessages.slice(0, -1).map((m) => ({ role: m.role, content: m.content })),
+          mode,
+          chatbotRole
+        );
+
+        for await (const chunk of stream) {
+          if (abortControllerRef.current?.signal.aborted) break;
+          accumulatedRaw += chunk;
+          const parsed = parseRawMessage(accumulatedRaw);
+          setConversations((prev) =>
+            prev.map((c) => {
+              if (c.id !== targetConv!.id) return c;
+              return {
+                ...c,
+                messages: c.messages.map((m) =>
+                  m.id === assistantPlaceholderId
+                    ? {
+                        ...m,
+                        rawContent: accumulatedRaw,
+                        thinkingContent: parsed.thinking,
+                        content: parsed.response || '',
+                        provider: 'offline',
+                        providerNotice: 'Berno Offline Cognitive Reserve',
+                        error: undefined,
+                      }
+                    : m
+                ),
+              };
+            })
+          );
+          scrollToBottom('auto');
+        }
+
+        const finalParsed = parseRawMessage(accumulatedRaw);
+        setConversations((prev) =>
+          prev.map((c) => {
+            if (c.id !== targetConv!.id) return c;
+            return {
+              ...c,
+              messages: c.messages.map((m) =>
+                m.id === assistantPlaceholderId
+                  ? {
+                      ...m,
+                      isStreaming: false,
+                      rawContent: accumulatedRaw,
+                      thinkingContent: finalParsed.thinking,
+                      content: finalParsed.response || accumulatedRaw,
+                      provider: 'offline',
+                      providerNotice: 'Berno Offline Cognitive Reserve',
+                    }
+                  : m
+              ),
+            };
+          })
+        );
+      } catch (offlineErr) {
+        console.error('Offline execution error:', offlineErr);
+      }
+    };
+
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      await runOfflineEngine();
+      setIsStreaming(false);
+      abortControllerRef.current = null;
+      return;
+    }
+
     try {
       const response = await fetch('/api/chat', {
         method: 'POST',
@@ -648,25 +838,37 @@ export default function App() {
       if (err.name === 'AbortError') {
         console.log('Stream aborted by user');
       } else {
-        console.error('Fetch stream error:', err);
-        setConversations((prev) =>
-          prev.map((c) => {
-            if (c.id !== targetConv!.id) return c;
-            return {
-              ...c,
-              messages: c.messages.map((m) =>
-                m.id === assistantPlaceholderId
-                  ? {
-                      ...m,
-                      isStreaming: false,
-                      error:
-                        err.message || 'An unexpected connection error occurred.',
-                    }
-                  : m
-              ),
-            };
-          })
-        );
+        const isOfflineError =
+          (typeof navigator !== 'undefined' && !navigator.onLine) ||
+          err.message?.includes('Failed to fetch') ||
+          err.message?.includes('NetworkError') ||
+          err.message?.includes('net::ERR_') ||
+          err.name === 'TypeError';
+
+        if (isOfflineError) {
+          console.warn('Network unavailable, engaging Berno offline cognitive engine...');
+          await runOfflineEngine();
+        } else {
+          console.error('Fetch stream error:', err);
+          setConversations((prev) =>
+            prev.map((c) => {
+              if (c.id !== targetConv!.id) return c;
+              return {
+                ...c,
+                messages: c.messages.map((m) =>
+                  m.id === assistantPlaceholderId
+                    ? {
+                        ...m,
+                        isStreaming: false,
+                        error:
+                          err.message || 'An unexpected connection error occurred.',
+                      }
+                    : m
+                ),
+              };
+            })
+          );
+        }
       }
     } finally {
       setIsStreaming(false);
@@ -694,6 +896,9 @@ export default function App() {
     setConversations((prev) => prev.filter((c) => c.id !== id));
     if (activeId === id) {
       setActiveId(null);
+    }
+    if (user) {
+      deleteConversationFromCloud(user.id, id);
     }
   };
 
@@ -832,15 +1037,44 @@ export default function App() {
     }
   };
 
-  const handleLoginSuccess = (authenticatedUser: User) => {
+  const handleLoginSuccess = async (authenticatedUser: User) => {
     setUser(authenticatedUser);
     try {
       localStorage.setItem('berno_auth_user', JSON.stringify(authenticatedUser));
     } catch {}
     showToast(`Welcome back, ${authenticatedUser.name}.`);
+
+    // Sync cloud conversations and settings
+    try {
+      const cloudConvs = await loadConversationsFromCloud(authenticatedUser.id);
+      if (cloudConvs && cloudConvs.length > 0) {
+        setConversations((localConvs) => {
+          const map = new Map(localConvs.map((c) => [c.id, c]));
+          for (const c of cloudConvs) {
+            const existing = map.get(c.id);
+            if (!existing || (c.updatedAt && c.updatedAt > (existing.updatedAt || 0))) {
+              map.set(c.id, c);
+            }
+          }
+          return Array.from(map.values());
+        });
+      }
+      const cloudSettings = await loadUserSettingsFromCloud(authenticatedUser.id);
+      if (cloudSettings) {
+        if (cloudSettings.fontSize) setFontSize(cloudSettings.fontSize);
+        if (cloudSettings.fontWeight) setFontWeight(cloudSettings.fontWeight);
+        if (cloudSettings.dailyGoalMinutes) setDailyGoalMinutes(cloudSettings.dailyGoalMinutes);
+        if (cloudSettings.activePlugin !== undefined) setActivePlugin(cloudSettings.activePlugin);
+      }
+    } catch (e) {
+      console.warn('Error syncing cloud data on login:', e);
+    }
   };
 
   const handleLogout = async () => {
+    try {
+      await logOut();
+    } catch {}
     try {
       await fetch('/api/auth/logout', { method: 'POST' });
     } catch {}
@@ -1214,6 +1448,8 @@ export default function App() {
           onToggleTableOfContents={() => setIsTableOfContentsOpen((prev) => !prev)}
           isTableOfContentsOpen={isTableOfContentsOpen}
           onShareEmail={handleShareEmail}
+          onOpenPlugins={() => setIsPluginsModalOpen(true)}
+          activePlugin={activePlugin}
         />
 
         {/* Dynamic Scroll Progress Bar for Active Dialogue */}
@@ -1240,15 +1476,65 @@ export default function App() {
         {/* Message Stream Area */}
         <div
           ref={scrollContainerRef}
+          data-weight={fontWeight}
+          data-plugin-active={Boolean(activePlugin)}
           className={`flex-1 overflow-y-auto px-4 py-6 scroll-smooth transition-colors duration-300 ${
             readabilityMode ? 'bg-[#090b0e]' : ''
           }`}
           style={
             {
               '--readability-font-size': `${fontSize}px`,
+              '--readability-font-weight': fontWeight === 'light' ? 300 : fontWeight === 'bold' ? 700 : 400,
+              ...(activePlugin ? {
+                '--plugin-primary': activePlugin.primaryColor,
+                '--plugin-bg': activePlugin.backgroundColor,
+                '--plugin-surface': activePlugin.surfaceColor,
+                '--plugin-text': activePlugin.textColor,
+                '--plugin-radius': activePlugin.borderRadius,
+              } : {})
             } as React.CSSProperties
           }
         >
+          {/* Active Website Style Plugin Pill Banner */}
+          {activePlugin && (
+            <div className="mx-auto max-w-4xl mb-4 animate-in fade-in slide-in-from-top-2 duration-300">
+              <div className="flex items-center justify-between rounded-xl border border-white/10 bg-[#12151f]/90 px-3.5 py-2 text-xs backdrop-blur-md shadow-md">
+                <div className="flex items-center gap-2.5">
+                  <span
+                    className="h-2.5 w-2.5 rounded-full animate-pulse shrink-0"
+                    style={{ backgroundColor: activePlugin.primaryColor }}
+                  />
+                  <div className="flex items-center gap-1.5 font-mono text-[11px] text-neutral-300">
+                    <span className="text-neutral-400">Website Style Plugin:</span>
+                    <span className="text-white font-semibold font-serif">{activePlugin.name}</span>
+                    <span className="text-[10px] text-neutral-400">({activePlugin.domain})</span>
+                    {activePlugin.adoptTone && (
+                      <span className="rounded bg-white/5 border border-white/10 px-1.5 py-0.2 text-[9px] text-[#e5b974]">
+                        Tone Active
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setIsPluginsModalOpen(true)}
+                    className="font-mono text-[10px] text-[#d4af37] hover:underline"
+                  >
+                    Configure
+                  </button>
+                  <span className="text-neutral-600">•</span>
+                  <button
+                    onClick={() => setActivePlugin(null)}
+                    className="font-mono text-[10px] text-red-400 hover:text-red-300"
+                  >
+                    Disconnect
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {messages.length === 0 ? (
             <EmptyState
               onSelectPrompt={(prompt, mode) => {
@@ -1368,6 +1654,8 @@ export default function App() {
             localStorage.setItem('berno_readability_font_size', String(size));
           } catch {}
         }}
+        fontWeight={fontWeight}
+        onChangeFontWeight={(weight) => setFontWeight(weight)}
         onToggleSoftKeyboard={() => setIsSoftKeyboardOpen((prev) => !prev)}
         isSoftKeyboardOpen={isSoftKeyboardOpen}
         onExportStatsPdf={handleExportPdf}
@@ -1389,11 +1677,20 @@ export default function App() {
         onNavigateToHeading={handleNavigateToHeading}
       />
 
-      {/* Scholar Authentication Modal */}
-      <AuthModal
-        isOpen={isAuthModalOpen}
-        onClose={() => setIsAuthModalOpen(false)}
-        onLoginSuccess={handleLoginSuccess}
+      {/* Website Style Plugins & API Keys Modal */}
+      <PluginsModal
+        isOpen={isPluginsModalOpen}
+        onClose={() => setIsPluginsModalOpen(false)}
+        activePlugin={activePlugin}
+        onApplyPlugin={(plugin) => setActivePlugin(plugin)}
+        conversations={conversations}
+        readingList={readingList}
+        user={user}
+        dailyWordsRead={messages.reduce(
+          (acc, m) => acc + (m.content ? m.content.split(/\s+/).length : 0),
+          0
+        )}
+        dailyReadingMinutes={dailyReadingMinutes}
       />
     </div>
   );

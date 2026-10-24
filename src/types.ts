@@ -47,7 +47,7 @@ export interface Message {
   chatbotRole?: ChatbotRole;
   isStreaming?: boolean;
   error?: string;
-  provider?: 'openai' | 'gemini_cognitive_reserve';
+  provider?: 'openai' | 'gemini_cognitive_reserve' | 'offline';
   providerNotice?: string;
   researchMode?: boolean;
   groundingSources?: GroundingSource[];
@@ -133,5 +133,41 @@ export interface User {
   tier?: 'Scholar' | 'Titan' | 'Architect';
   createdAt: number;
 }
+
+export type FontWeightVariant = 'light' | 'normal' | 'bold';
+
+export interface WebsitePluginTheme {
+  id: string;
+  name: string;
+  url: string;
+  domain: string;
+  primaryColor: string;
+  secondaryColor: string;
+  backgroundColor: string;
+  surfaceColor: string;
+  textColor: string;
+  fontFamily: 'serif' | 'sans' | 'mono';
+  borderRadius: string;
+  description: string;
+  editorialTone: string;
+  isActive: boolean;
+  accentGradient?: string;
+  favicon?: string;
+  adoptTone?: boolean;
+}
+
+export interface ApiKeyItem {
+  id: string;
+  name: string;
+  keyPrefix: string;
+  key: string;
+  permissions: string[];
+  targetWebsite?: string;
+  createdAt: number;
+  lastUsedAt?: number;
+  status: 'active' | 'revoked';
+}
+
+
 
 

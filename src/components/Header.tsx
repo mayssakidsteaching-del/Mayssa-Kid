@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
-import { ThinkingMode, ChatbotRole, User } from '../types';
+import { ThinkingMode, ChatbotRole, User, WebsitePluginTheme } from '../types';
 import { THINKING_MODES } from '../utils/constants';
 import { CHATBOT_ROLES, AVAILABLE_MODELS } from '../utils/chatbotRoles';
 import { ExportProgressRing } from './ExportProgressRing';
+import { PWAInstallButton } from './PWAInstallButton';
 import {
   Menu,
   Plus,
@@ -29,6 +30,7 @@ import {
   Compass,
   Share2,
   FileSpreadsheet,
+  Puzzle,
 } from 'lucide-react';
 
 interface HeaderProps {
@@ -69,6 +71,8 @@ interface HeaderProps {
   onOpenKnowledgeGraph?: () => void;
   onDownloadCitationsCsv?: () => void;
   citationCount?: number;
+  onOpenPlugins?: () => void;
+  activePlugin?: WebsitePluginTheme | null;
 }
 
 export function Header({
@@ -109,6 +113,8 @@ export function Header({
   onOpenKnowledgeGraph,
   onDownloadCitationsCsv,
   citationCount = 0,
+  onOpenPlugins,
+  activePlugin = null,
 }: HeaderProps) {
   const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
@@ -236,6 +242,28 @@ export function Header({
           <span className="hidden sm:inline">Voice</span>
         </button>
 
+        {/* Plugins Button: Connect to any website and adopt its style */}
+        {onOpenPlugins && (
+          <button
+            onClick={onOpenPlugins}
+            className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-mono transition-all shadow-sm ${
+              activePlugin
+                ? 'border-[#d4af37] bg-[#d4af37]/25 text-[#f3cf65] font-semibold shadow-[0_0_12px_rgba(212,175,55,0.25)]'
+                : 'border-white/10 bg-white/5 text-neutral-300 hover:bg-white/10 hover:text-white'
+            }`}
+            title={
+              activePlugin
+                ? `Plugin Active: Connected to ${activePlugin.name} (${activePlugin.domain})`
+                : 'Plugins: Connect to any website to extract and adopt its visual & editorial style'
+            }
+          >
+            <Puzzle className={`h-3.5 w-3.5 ${activePlugin ? 'text-[#f3cf65]' : 'text-[#d4af37]'}`} />
+            <span>Plugins</span>
+            {activePlugin && (
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse ml-0.5" />
+            )}
+          </button>
+        )}
 
         {/* Readability Mode Toggle */}
         <button
@@ -700,6 +728,9 @@ export function Header({
             <span className="hidden sm:inline">Sign In</span>
           </button>
         )}
+
+        {/* PWA In-App Install Prompt */}
+        <PWAInstallButton variant="header" />
 
         {/* Intellectual architecture modal */}
         <button

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import {
   Check,
   Copy,
@@ -70,6 +70,42 @@ export function CodeBlock({ language, code, initialFolded }: CodeBlockProps) {
   const [showLineNumbers, setShowLineNumbers] = useState(true);
   const [wrapText, setWrapText] = useState(false);
 
+  // Cyclomatic complexity approximation
+  const complexity = useMemo(() => {
+    let count = 1;
+    const branchRegex = /\b(if|else\s+if|elif|for|while|case|catch|&&|\|\||\?)\b/g;
+    const matches = code.match(branchRegex);
+    if (matches) {
+      count += matches.length;
+    }
+    return count;
+  }, [code]);
+
+  const complexityBadge = useMemo(() => {
+    if (complexity <= 5) {
+      return {
+        label: `CC: ${complexity} (Low)`,
+        color: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30',
+        dot: 'bg-emerald-400',
+        title: `Low Cyclomatic Complexity (~${complexity}): Simple, direct execution flow.`,
+      };
+    } else if (complexity <= 14) {
+      return {
+        label: `CC: ${complexity} (Moderate)`,
+        color: 'text-amber-300 bg-amber-500/10 border-amber-500/30',
+        dot: 'bg-amber-400',
+        title: `Moderate Cyclomatic Complexity (~${complexity}): Contains moderate conditional branches.`,
+      };
+    } else {
+      return {
+        label: `CC: ${complexity} (High)`,
+        color: 'text-rose-400 bg-rose-500/10 border-rose-500/30',
+        dot: 'bg-rose-400',
+        title: `High Cyclomatic Complexity (~${complexity}): Complex conditional pathways.`,
+      };
+    }
+  }, [complexity]);
+
   const handleCopy = async (e?: React.MouseEvent) => {
     e?.stopPropagation();
     try {
@@ -114,6 +150,15 @@ export function CodeBlock({ language, code, initialFolded }: CodeBlockProps) {
           </span>
           <span className="font-mono text-[11px] text-neutral-500">
             {totalLines} {totalLines === 1 ? 'line' : 'lines'}
+          </span>
+
+          {/* Cyclomatic Complexity Metric Indicator */}
+          <span
+            className={`hidden sm:inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 font-mono text-[10px] font-medium cursor-help transition-colors ${complexityBadge.color}`}
+            title={complexityBadge.title}
+          >
+            <span className={`h-1.5 w-1.5 rounded-full ${complexityBadge.dot}`} />
+            <span>{complexityBadge.label}</span>
           </span>
 
           {isFolded && (

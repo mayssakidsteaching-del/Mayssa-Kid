@@ -34,6 +34,8 @@ interface ReaderDashboardModalProps {
   onChangeDailyGoal: (minutes: number) => void;
   fontSize: number;
   onChangeFontSize: (size: number) => void;
+  fontWeight?: 'light' | 'normal' | 'bold';
+  onChangeFontWeight?: (weight: 'light' | 'normal' | 'bold') => void;
   onToggleSoftKeyboard: () => void;
   isSoftKeyboardOpen: boolean;
   onExportStatsPdf: () => void;
@@ -56,6 +58,8 @@ export function ReaderDashboardModal({
   onChangeDailyGoal,
   fontSize,
   onChangeFontSize,
+  fontWeight = 'normal',
+  onChangeFontWeight,
   onToggleSoftKeyboard,
   isSoftKeyboardOpen,
   onExportStatsPdf,
@@ -357,6 +361,44 @@ export function ReaderDashboardModal({
                   className="w-full h-1.5 bg-white/10 rounded-lg appearance-none cursor-pointer accent-[#d4af37]"
                 />
                 <span className="text-lg text-neutral-300 font-serif">A</span>
+              </div>
+            </div>
+
+            {/* Serif Font Weight Toggle: Thin, Regular, Bold */}
+            <div className="space-y-2 pt-2 border-t border-white/5">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-neutral-400 font-mono">Serif Typeface Weight</span>
+                <span className="font-mono font-bold text-[#e5b974] capitalize">
+                  {fontWeight === 'light' ? 'Thin (300)' : fontWeight === 'bold' ? 'Bold (700)' : 'Regular (400)'}
+                </span>
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { id: 'light', label: 'Thin', weightClass: 'font-light', desc: 'Editorial 300' },
+                  { id: 'normal', label: 'Regular', weightClass: 'font-normal', desc: 'Book 400' },
+                  { id: 'bold', label: 'Bold', weightClass: 'font-bold', desc: 'Heavy 700' },
+                ].map((variant) => {
+                  const isSelected = fontWeight === variant.id;
+                  return (
+                    <button
+                      key={variant.id}
+                      type="button"
+                      onClick={() => onChangeFontWeight?.(variant.id as 'light' | 'normal' | 'bold')}
+                      className={`flex flex-col items-center justify-center p-2 rounded-xl border transition-all ${
+                        isSelected
+                          ? 'border-[#d4af37] bg-[#d4af37]/20 text-[#f3cf65] shadow-sm'
+                          : 'border-white/10 bg-white/5 text-neutral-300 hover:bg-white/10 hover:text-white'
+                      }`}
+                    >
+                      <span className={`font-serif text-sm tracking-wide ${variant.weightClass}`}>
+                        {variant.label}
+                      </span>
+                      <span className="text-[10px] font-mono text-neutral-400 mt-0.5">
+                        {variant.desc}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 

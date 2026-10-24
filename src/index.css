@@ -152,15 +152,29 @@
 .berno-prose.readability-serif {
   font-family: var(--font-serif);
   font-size: var(--readability-font-size, 1.125rem);
+  font-weight: var(--readability-font-weight, 400);
   line-height: 1.88;
   color: #e5e9f0;
   letter-spacing: 0.012em;
   text-rendering: optimizeLegibility;
 }
 
-.berno-prose.readability-serif p {
+.berno-prose.readability-serif p,
+.berno-prose.readability-serif li {
+  font-weight: var(--readability-font-weight, 400);
   margin-bottom: 1.4rem;
   font-feature-settings: "kern" 1, "liga" 1;
+}
+
+/* Serif font weight utility classes */
+.weight-light, [data-weight="light"] .readability-serif, [data-weight="light"] .readability-serif p {
+  font-weight: 300 !important;
+}
+.weight-normal, [data-weight="normal"] .readability-serif, [data-weight="normal"] .readability-serif p {
+  font-weight: 400 !important;
+}
+.weight-bold, [data-weight="bold"] .readability-serif, [data-weight="bold"] .readability-serif p {
+  font-weight: 700 !important;
 }
 
 .berno-prose.readability-serif h1,

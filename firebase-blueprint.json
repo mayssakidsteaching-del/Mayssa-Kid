@@ -1,0 +1,88 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Authenticated scholar user profile and telemetry",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["uid", "email"]
+    },
+    "Conversation": {
+      "title": "Conversation",
+      "description": "User philosophical inquiry session and dialogues",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "mode": { "type": "string" },
+        "chatbotRole": { "type": "string" },
+        "isPinned": { "type": "boolean" },
+        "tags": { "type": "array" },
+        "messages": { "type": "array" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "userId", "title"]
+    },
+    "UserSettings": {
+      "title": "UserSettings",
+      "description": "Reader preferences, typography, goals and active website style plugins",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "fontSize": { "type": "number" },
+        "fontWeight": { "type": "string" },
+        "dailyGoalMinutes": { "type": "number" },
+        "readabilityMode": { "type": "boolean" },
+        "activePlugin": { "type": "object" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["userId"]
+    },
+    "ApiKey": {
+      "title": "ApiKey",
+      "description": "User generated API keys for external website access and data synchronization",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "name": { "type": "string" },
+        "keyPrefix": { "type": "string" },
+        "hashedKey": { "type": "string" },
+        "rawKey": { "type": "string" },
+        "permissions": { "type": "array" },
+        "targetWebsite": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "lastUsedAt": { "type": "string" },
+        "status": { "type": "string" }
+      },
+      "required": ["id", "userId", "name", "hashedKey"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profiles restricted to owner"
+    },
+    "/users/{userId}/conversations/{conversationId}": {
+      "schema": "Conversation",
+      "description": "User conversations and chat records restricted to owner"
+    },
+    "/users/{userId}/settings/{settingId}": {
+      "schema": "UserSettings",
+      "description": "User reader settings and custom website style plugins"
+    },
+    "/users/{userId}/api_keys/{keyId}": {
+      "schema": "ApiKey",
+      "description": "User generated API keys for external websites restricted to owner"
+    }
+  }
+}

@@ -22,6 +22,7 @@ import { TagPicker } from './TagPicker';
 import { getTagStyle, normalizeTag, PRESET_TAGS } from '../utils/tagUtils';
 import { ReadingListView } from './ReadingListView';
 import { ReadingHistoryView } from './ReadingHistoryView';
+import { PWAInstallButton } from './PWAInstallButton';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -484,14 +485,14 @@ export function Sidebar({
   {/* User Account Status in Sidebar */}
   {user ? (
     <div className="border-t border-white/10 bg-[#0c0f16] p-3">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between mb-1.5">
         <div className="flex items-center gap-2.5 min-w-0">
           <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[#d4af37] text-xs font-bold text-black font-mono shadow-sm shrink-0">
             {user.name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()}
           </div>
           <div className="min-w-0">
             <div className="text-xs font-medium text-white truncate max-w-[125px]">{user.name}</div>
-            <div className="text-[10px] font-mono text-[#d4af37]">{user.tier} Tier</div>
+            <div className="text-[10px] font-mono text-[#d4af37]">{user.role || `${user.tier || 'Scholar'} Tier`}</div>
           </div>
         </div>
         <button
@@ -501,6 +502,10 @@ export function Sidebar({
         >
           <LogOut className="h-3.5 w-3.5" />
         </button>
+      </div>
+      <div className="flex items-center gap-1.5 pt-1 border-t border-white/5 text-[10px] font-mono text-emerald-400">
+        <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+        <span>Firebase Cloud Sync Active</span>
       </div>
     </div>
   ) : (
@@ -520,6 +525,9 @@ export function Sidebar({
 
   {/* Footer System Status */}
   <div className="border-t border-white/10 bg-[#07080b] p-3 text-xs">
+    <div className="mb-2.5">
+      <PWAInstallButton variant="sidebar" />
+    </div>
     <div className="flex items-center gap-2 text-neutral-400">
       <div className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
       <span className="font-mono text-[11px]">Berno Reasoning Engine</span>

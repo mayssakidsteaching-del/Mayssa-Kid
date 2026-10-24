@@ -1,6 +1,11 @@
 import React, { useState } from 'react';
 import { User } from '../types';
 import {
+  signUpWithEmail,
+  signInWithEmail,
+  signInWithGoogle,
+} from '../lib/firebase';
+import {
   X,
   Lock,
   Mail,
@@ -14,6 +19,7 @@ import {
   UserPlus,
   ArrowRight,
   BookOpen,
+  Chrome,
 } from 'lucide-react';
 
 interface AuthModalProps {
@@ -79,52 +85,59 @@ export function AuthModal({ isOpen, onClose, onLoginSuccess }: AuthModalProps) {
     setIsLoading(true);
 
     try {
-      // Call backend API if available, fallback gracefully
-      const endpoint = mode === 'signup' ? '/api/auth/signup' : '/api/auth/login';
-      const body =
-        mode === 'signup'
-          ? { name: name.trim(), email: email.trim(), password, tier }
-          : { email: email.trim(), password, rememberMe };
-
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        if (data.user) {
-          onLoginSuccess(data.user);
-          onClose();
-          return;
-        }
+      let authenticatedUser: User;
+      if (mode === 'signup') {
+        authenticatedUser = await signUpWithEmail(email.trim(), password, name.trim());
+      } else {
+        authenticatedUser = await signInWithEmail(email.trim(), password);
       }
 
-      // If server returned non-ok or isn't handling it, generate or validate client session
-      const user: User = {
-        id: `user-${Date.now()}`,
-        name: mode === 'signup' ? name.trim() : email.split('@')[0],
-        email: email.trim(),
-        tier: mode === 'signup' ? tier : 'Scholar',
-        role: mode === 'signup' ? `${tier} Inquirer` : 'Berno Scholar',
-        createdAt: Date.now(),
-      };
-
-      onLoginSuccess(user);
+      onLoginSuccess(authenticatedUser);
       onClose();
     } catch (err: any) {
-      // Local fallback in offline mode
-      const user: User = {
-        id: `user-${Date.now()}`,
-        name: mode === 'signup' ? name.trim() : email.split('@')[0],
-        email: email.trim(),
-        tier: mode === 'signup' ? tier : 'Scholar',
-        role: 'Berno Scholar',
-        createdAt: Date.now(),
-      };
-      onLoginSuccess(user);
+      console.warn('Firebase Auth error, checking code:', err);
+      let msg = err.message || 'Authentication failed. Please verify credentials.';
+      if (err.code === 'auth/email-already-in-use') {
+        msg = 'This email is already registered. Please sign in instead.';
+      } else if (err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
+        msg = 'Invalid email or password combination.';
+      } else if (err.code === 'auth/weak-password') {
+        msg = 'Password should be at least 6 characters.';
+      } else if (err.code === 'auth/network-request-failed') {
+        msg = 'Network connection issue. Preserving credentials in offline mode.';
+        // Fallback to offline user session if network is unreachable
+        const user: User = {
+          id: `user-${Date.now()}`,
+          name: mode === 'signup' ? name.trim() : email.split('@')[0],
+          email: email.trim(),
+          tier: mode === 'signup' ? tier : 'Scholar',
+          role: 'Berno Scholar (Offline)',
+          createdAt: Date.now(),
+        };
+        onLoginSuccess(user);
+        onClose();
+        return;
+      }
+      setErrorMessage(msg);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setErrorMessage(null);
+    setIsLoading(true);
+    try {
+      const authenticatedUser = await signInWithGoogle();
+      onLoginSuccess(authenticatedUser);
       onClose();
+    } catch (err: any) {
+      console.warn('Google Sign-In error:', err);
+      if (err.code === 'auth/popup-closed-by-user') {
+        setErrorMessage('Sign-in popup was dismissed.');
+      } else {
+        setErrorMessage(err.message || 'Google authentication could not be completed.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -231,6 +244,44 @@ export function AuthModal({ isOpen, onClose, onLoginSuccess }: AuthModalProps) {
                 </span>
               </button>
             ))}
+          </div>
+        </div>
+
+        {/* Real Google Account Sign-In */}
+        <div className="mb-4">
+          <button
+            type="button"
+            onClick={handleGoogleSignIn}
+            disabled={isLoading}
+            className="w-full flex items-center justify-center gap-2.5 rounded-xl border border-white/20 bg-white/5 hover:bg-white/10 hover:border-white/30 text-white py-2.5 text-xs font-mono font-medium transition-all shadow-sm disabled:opacity-50"
+          >
+            <svg className="h-4 w-4" viewBox="0 0 24 24">
+              <path
+                fill="#4285F4"
+                d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"
+              />
+              <path
+                fill="#34A853"
+                d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.36 24 12 24z"
+              />
+              <path
+                fill="#FBBC05"
+                d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 9.99 0 12s.45 3.82 1.25 5.42l4.03-3.15z"
+              />
+              <path
+                fill="#EA4335"
+                d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.36 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"
+              />
+            </svg>
+            <span>Continue with Google Account</span>
+          </button>
+
+          <div className="flex items-center my-3.5">
+            <div className="flex-grow border-t border-white/10" />
+            <span className="flex-shrink mx-3 text-[10px] font-mono uppercase text-neutral-500">
+              Or with email
+            </span>
+            <div className="flex-grow border-t border-white/10" />
           </div>
         </div>
 
