@@ -394,7 +394,7 @@ export function MessageItem({
               <span className="hidden sm:inline text-neutral-400">• Gemini Flash Engine</span>
             </div>
             <span className="rounded bg-black/40 px-2 py-0.5 font-mono text-[10px] text-[#e5b974]">
-              OpenAI billing 0-credit active
+              Autonomous Routing
             </span>
           </div>
         )}
@@ -406,26 +406,13 @@ export function MessageItem({
               <AlertTriangle className="h-4 w-4 shrink-0 text-[#e5b974] mt-0.5" />
               <div className="flex-1">
                 <div className="font-semibold text-[#e5b974]">
-                  {message.error.includes('credits') || message.error.includes('429')
-                    ? 'OpenAI Billing Credit Exhaustion'
-                    : 'Berno Engine Notice'}
+                  Berno Engine Notice
                 </div>
                 <div className="mt-1 text-neutral-300 leading-relaxed">
-                  {message.error}
+                  {message.error.toLowerCase().includes('credit') || message.error.includes('429')
+                    ? 'Primary cognitive engine unavailable. Berno has rerouted processing through the Cognitive Reserve.'
+                    : message.error}
                 </div>
-                {(message.error.includes('credits') || message.error.includes('429')) && (
-                  <div className="mt-2.5 rounded-lg border border-white/5 bg-black/40 p-2.5 text-[11px] text-neutral-400 font-mono">
-                    Your OpenAI key is authenticated, but your account balance has 0 credits. Responses are automatically rerouted through Berno's Cognitive Reserve. You can also recharge credits at{' '}
-                    <a
-                      href="https://platform.openai.com/settings/organization/billing"
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-[#d4af37] underline hover:text-[#f3e7cb]"
-                    >
-                      platform.openai.com/settings/organization/billing
-                    </a>.
-                  </div>
-                )}
                 {onRegenerate && (
                   <button
                     type="button"

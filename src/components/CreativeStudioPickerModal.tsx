@@ -155,7 +155,10 @@ export function CreativeStudioPickerModal({
 
         {/* Footer */}
         <div className="border-t border-white/5 px-6 py-3 bg-[#0a0c12] flex items-center justify-between text-[11px] font-mono text-neutral-500">
-          <span>Powered by Google DeepMind Generative APIs</span>
+          <span className="flex items-center gap-1.5 text-neutral-400">
+            <Sparkles className="h-3 w-3 text-[#d4af37]" />
+            High-Fidelity Studio Production
+          </span>
           <span>Berno Creative Suite</span>
         </div>
       </div>
